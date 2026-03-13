@@ -1,0 +1,534 @@
+---
+title: "Hints Mode"
+description: "Accessibility-based navigation with clickable element labels"
+---
+
+## Overview
+
+Hints Mode uses **macOS Accessibility APIs** to identify clickable UI elements and overlays short character labels on each one. It's the fastest way to click buttons, links, and other interactive elements when it works.
+
+<Check>**Instant element discovery** — see all clickable items at once</Check>
+<Check>**Fast selection** — 2-3 keystrokes to click</Check>
+<Check>**Semantic targeting** — labels appear on actual interactive elements</Check>
+<Warning>Requires **accessibility API support** — not all apps expose their UI</Warning>
+
+## How It Works
+
+<Steps>
+  <Step title="Activate hints mode">
+    Press `Cmd+Shift+Space` (default). Neru queries the macOS accessibility tree to find all clickable elements.
+  </Step>
+  
+  <Step title="Labels appear on elements">
+    Each clickable element gets a unique 1-3 character label (like `f`, `jk`, `as`). The labels use your configured `hint_characters`.
+  </Step>
+  
+  <Step title="Type the label to select">
+    Start typing the label. As you type, non-matching hints disappear, and matched characters change color.
+  </Step>
+  
+  <Step title="Action executes automatically">
+    When only one hint matches, Neru automatically:
+    - Moves cursor to the element
+    - Performs the configured action (click, move, etc.)
+    - Exits mode (if `auto_exit_actions` is configured)
+  </Step>
+</Steps>
+
+## Visual Example
+
+```
+Browser window with hints visible:
+
+┌─────────────────────────────────────┐
+│  [f] File  [d] Edit  [s] View  [a] │  ← Menu items
+├─────────────────────────────────────┤
+│  [g] ←  [h] →  [j] 🔄  [k] 🏠      │  ← Toolbar buttons
+│                                     │
+│  [l] Sign Up        [m] Learn More │  ← Buttons in page
+│                                     │
+│  Article headline                   │
+│  Lorem ipsum... [n] Read More       │  ← Link
+└─────────────────────────────────────┘
+
+Type 'l' → cursor moves to "Sign Up", clicks it
+Type 'n' → cursor moves to "Read More", clicks it
+```
+
+## Default Configuration
+
+### Hint Characters
+
+By default, hints use **home row characters**:
+
+```toml
+[hints]
+hint_characters = "asdfghjkl"
+```
+
+Labels are generated from these characters, prioritizing single characters for the most prominent elements:
+
+- First 9 elements: `a`, `s`, `d`, `f`, `g`, `h`, `j`, `k`, `l`
+- Next elements: `aa`, `as`, `ad`, `af`, ...
+
+### Keybindings
+
+| Action | Key | Description |
+|--------|-----|-------------|
+| **Type label** | Any hint character | Filter to matching hints |
+| **Backspace** | `Backspace` | Delete last typed character |
+| **Exit mode** | `Escape` | Exit hints mode |
+| **Left click** | `Shift+L` | Click at current cursor position |
+| **Right click** | `Shift+R` | Open context menu |
+
+## Configuration
+
+### Basic Setup
+
+```toml
+[hints]
+enabled = true
+
+# Characters used for generating labels
+hint_characters = "asdfghjkl"
+
+# Backspace key for correcting input
+backspace_key = "Backspace"
+
+# Auto-exit after these actions
+auto_exit_actions = ["left_click", "middle_click"]
+
+# Additional exit keys (merged with general.mode_exit_keys)
+mode_exit_keys = []
+```
+
+### Custom Hint Characters
+
+#### Vim-Style (hjkl-based)
+
+```toml
+[hints]
+hint_characters = "hjklasdfg"
+```
+
+#### Center Columns (for split keyboards)
+
+```toml
+[hints]
+hint_characters = "fjdksla;g"
+```
+
+#### Colemak Layout
+
+```toml
+[hints]
+hint_characters = "arstneio"
+```
+
+<Warning>
+  `hint_characters` must:
+  - Contain **at least 2 unique ASCII characters**
+  - Have **no duplicates** (case-insensitive)
+  - Not conflict with `mode_exit_keys`
+</Warning>
+
+### Visual Customization
+
+```toml
+[hints.ui]
+# Label appearance
+font_size = 10
+font_family = "SF Mono"
+border_radius = -1  # -1 = auto pill shape
+border_width = 1
+padding_x = -1      # -1 = auto based on font size
+padding_y = -1
+
+# Colors (theme-aware)
+background_color_light = "#F200CFCF"  # Cyan, 95% opacity
+background_color_dark = "#F2007A9E"   # Teal, 95% opacity
+
+text_color_light = "#FF003554"  # Deep teal
+text_color_dark = "#FFFFFFFF"   # White
+
+# Matched characters (as you type)
+matched_text_color_light = "#FFAAEEFF"  # Light blue
+matched_text_color_dark = "#FF003554"   # Deep teal
+
+border_color_light = "#FF008A8A"
+border_color_dark = "#FF00B4D8"
+```
+
+### Clickable Element Types
+
+Define which accessibility roles are considered clickable:
+
+```toml
+[hints]
+clickable_roles = [
+    "AXButton",
+    "AXComboBox",
+    "AXCheckBox",
+    "AXRadioButton",
+    "AXLink",
+    "AXPopUpButton",
+    "AXTextField",
+    "AXSlider",
+    "AXTabButton",
+    "AXSwitch",
+    "AXDisclosureTriangle",
+    "AXTextArea",
+    "AXMenuButton",
+    "AXMenuItem",
+    "AXCell",
+    "AXRow",
+]
+
+# Skip clickability heuristic (show all elements with these roles)
+ignore_clickable_check = false
+```
+
+### System Area Hints
+
+Show hints in macOS system areas:
+
+```toml
+[hints]
+# Menubar (top bar with app menus)
+include_menubar_hints = false
+
+# Dock (bottom/side app launcher)
+include_dock_hints = false
+
+# Notification Center
+include_nc_hints = false
+
+# Stage Manager windows
+include_stage_manager_hints = false
+
+# Mission Control detection (macOS 15.4+ only)
+# WARNING: Do NOT enable on older macOS versions
+detect_mission_control = false
+
+# Additional menubar apps to scan
+additional_menubar_hints_targets = [
+    "com.apple.controlcenter",
+    "com.apple.systemuiserver",
+]
+```
+
+<Warning>
+  `detect_mission_control` only works on macOS 15.4+. Enabling it on older versions causes false positives.
+</Warning>
+
+### Performance Tuning
+
+```toml
+[hints]
+# Delay before refreshing hints after a click (for dynamic content)
+mouse_action_refresh_delay = 0  # milliseconds (0-10000)
+
+# Maximum accessibility tree depth to traverse
+max_depth = 50  # 0 = unlimited
+
+# Minimum children for parallel processing
+parallel_threshold = 20
+```
+
+<Info>
+  Increase `mouse_action_refresh_delay` (e.g., 500ms) for slow-loading apps or dynamic web content that changes after clicks.
+</Info>
+
+## App Compatibility
+
+### Fully Compatible (Native Apps)
+
+<Check>**Safari, Chrome, Firefox** — with enhanced support enabled</Check>
+<Check>**Finder, Mail, Messages, Calendar, Notes** — full support</Check>
+<Check>**System Settings, App Store** — full support</Check>
+<Check>**Most native macOS apps** — full support</Check>
+
+### Requires Configuration (Electron Apps)
+
+Electron apps need `AXManualAccessibility` attribute enabled:
+
+```toml
+[hints.additional_ax_support]
+enable = true
+
+# Auto-detected by default:
+# - VS Code (com.microsoft.VSCode)
+# - Slack (com.tinyspeck.slackmacgap)
+# - Obsidian (md.obsidian)
+# - Spotify (com.spotify.client)
+# - Windsurf (com.exafunction.windsurf)
+
+# Add custom Electron apps:
+additional_electron_bundles = ["com.your.electronapp"]
+```
+
+### Requires Configuration (Browsers)
+
+Chromium and Firefox browsers need enhanced accessibility:
+
+```toml
+[hints.additional_ax_support]
+enable = true
+
+# Auto-detected by default:
+# - Chrome (com.google.Chrome)
+# - Brave (com.brave.Browser)
+# - Arc (company.thebrowser.Browser)
+# - Firefox (org.mozilla.firefox)
+# - Zen Browser (app.zen-browser.zen)
+
+# Add custom browsers:
+additional_chromium_bundles = ["com.your.browser"]
+additional_firefox_bundles = ["org.your.firefox"]
+```
+
+### Limited or No Support
+
+<Warning>**Games** — typically no accessibility API</Warning>
+<Warning>**Adobe apps** — limited/inconsistent accessibility</Warning>
+<Warning>**Java apps** — may need custom roles</Warning>
+<Warning>**Terminal apps** — text-based UI, limited clickable elements</Warning>
+
+<Info>
+  When hints mode doesn't work, **use recursive grid mode** (`Cmd+Shift+C`) instead. It works 100% of the time.
+</Info>
+
+## Per-App Configuration
+
+Override settings for specific applications:
+
+```toml
+# Chrome: add tab groups as clickable
+[[hints.app_configs]]
+bundle_id = "com.google.Chrome"
+additional_clickable_roles = ["AXTabGroup"]
+
+# Adobe Illustrator: treat static text and images as clickable
+[[hints.app_configs]]
+bundle_id = "com.adobe.illustrator"
+additional_clickable_roles = ["AXStaticText", "AXImage"]
+ignore_clickable_check = true
+
+# Safari: delay refresh for dynamic content
+[[hints.app_configs]]
+bundle_id = "com.apple.Safari"
+mouse_action_refresh_delay = 1000  # 1 second
+```
+
+### Finding Bundle IDs
+
+```bash
+osascript -e 'id of app "Safari"'
+# Output: com.apple.Safari
+
+osascript -e 'id of app "Visual Studio Code"'
+# Output: com.microsoft.VSCode
+```
+
+## Use Cases
+
+### Web Browsing
+
+**Best use case for hints mode.**
+
+1. Press `Cmd+Shift+Space`
+2. Type hint label for the link/button you want
+3. Mode auto-exits after clicking
+
+### Form Filling
+
+Navigate between form fields:
+
+1. Press `Cmd+Shift+Space`
+2. Type label for the input field
+3. Type your input
+4. Repeat for next field
+
+### Dialog Navigation
+
+Quickly click buttons in dialogs:
+
+```
+┌─────────────────────────────┐
+│  Save changes?              │
+│                             │
+│  [f] Don't Save  [d] Cancel │
+│  [s] Save                   │
+└─────────────────────────────┘
+
+Cmd+Shift+Space, type 's' → clicks Save
+```
+
+### Menu Bar Navigation
+
+With `include_menubar_hints = true`:
+
+1. Press `Cmd+Shift+Space`
+2. Type label for menu item
+3. Menu opens or action executes
+
+## Advanced Techniques
+
+### Refreshing Hints After Actions
+
+Some apps dynamically change UI after clicks. To stay in hints mode and refresh:
+
+```toml
+[hints]
+auto_exit_actions = []  # Don't exit after clicking
+mouse_action_refresh_delay = 500  # Wait 500ms, then refresh hints
+```
+
+Then:
+1. Click button with hint
+2. UI changes (new buttons appear)
+3. Hints automatically refresh
+4. Select next action
+5. Press `Escape` when done
+
+### Combining with Scroll Mode
+
+Navigate a long webpage:
+
+1. `Cmd+Shift+Space` → Click a link
+2. `Cmd+Shift+S` → Enter scroll mode
+3. `j`/`k` → Scroll through content
+4. `Escape` → Exit scroll mode
+5. Repeat
+
+### Using Direct Actions
+
+Perform non-click actions on hinted elements:
+
+1. `Cmd+Shift+Space` → Activate hints
+2. Type hint label (cursor moves to element)
+3. `Shift+R` → Right-click for context menu
+4. Or `↑↓←→` → Nudge cursor to nearby element
+
+## Troubleshooting
+
+### No hints appear
+
+**Cause 1:** App doesn't expose accessibility API.
+
+**Solution:** Use recursive grid mode instead.
+
+**Cause 2:** Accessibility permissions not granted.
+
+**Solution:**
+```bash
+# Check permissions
+neru accessibility status
+
+# Open System Settings to grant permission
+open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+```
+
+**Cause 3:** Hints mode disabled in config.
+
+**Solution:**
+```toml
+[hints]
+enabled = true
+```
+
+### Hints appear in wrong locations
+
+**Cause:** Multi-monitor setup, hints appearing on different screen.
+
+**Solution:** Move your cursor to the target screen before activating hints mode.
+
+### Too many/too few hints
+
+**Cause:** Clickable roles configuration.
+
+**Solution:**
+```toml
+[hints]
+# Add more roles for more hints
+clickable_roles = [
+    "AXButton",
+    "AXLink",
+    "AXStaticText",  # Add this
+    "AXImage",       # Add this
+]
+
+# Or reduce roles for fewer hints
+clickable_roles = ["AXButton", "AXLink"]  # Only buttons and links
+```
+
+### Hints slow to appear
+
+**Cause:** Complex accessibility tree.
+
+**Solution:**
+```toml
+[hints]
+max_depth = 30          # Limit tree depth (faster, fewer hints)
+parallel_threshold = 10 # More parallelization
+```
+
+### Electron app hints not working
+
+**Cause:** `AXManualAccessibility` not enabled.
+
+**Solution:**
+```toml
+[hints.additional_ax_support]
+enable = true
+additional_electron_bundles = ["com.your.app"]
+```
+
+Find the bundle ID:
+```bash
+osascript -e 'id of app "YourApp"'
+```
+
+### Browser hints not working
+
+**Cause:** Enhanced accessibility not enabled.
+
+**Solution:**
+```toml
+[hints.additional_ax_support]
+enable = true
+```
+
+## Performance
+
+- **Activation time:** 100-500ms (depends on UI complexity)
+- **Memory usage:** ~2-5MB (hint data + overlays)
+- **CPU usage:** < 1% during activation, < 0.1% when idle
+- **Requires:** Accessibility API queries (online or offline)
+
+## Comparison with Other Tools
+
+| Feature | Neru Hints | Vimium (browser) | Homerow |
+|---------|------------|------------------|----------|
+| System-wide | ✅ Yes | ❌ Browser only | ✅ Yes |
+| Free & Open Source | ✅ Yes | ✅ Yes | ❌ Paid |
+| Electron support | ✅ Configurable | ❌ N/A | ⚠️ Limited |
+| Custom hint characters | ✅ Yes | ✅ Yes | ❌ No |
+| Menubar hints | ✅ Yes | ❌ No | ✅ Yes |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Recursive Grid" icon="grid" href="/concepts/recursive-grid">
+    Fallback when hints mode doesn't work
+  </Card>
+  <Card title="Grid Mode" icon="table-cells" href="/concepts/grid-mode">
+    Coordinate-based navigation
+  </Card>
+  <Card title="Scroll Mode" icon="scroll" href="/concepts/scroll-mode">
+    Vim-style scrolling
+  </Card>
+  <Card title="Configuration Reference" icon="gear" href="/guides/configuration">
+    Full hints mode configuration options
+  </Card>
+</CardGroup>

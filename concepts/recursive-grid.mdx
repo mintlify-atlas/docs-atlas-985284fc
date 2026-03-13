@@ -1,0 +1,477 @@
+---
+title: "Recursive Grid Mode"
+description: "Precise cursor positioning through progressive coordinate subdivision"
+---
+
+## Overview
+
+Recursive Grid mode divides your screen into a grid of cells, then lets you **recursively subdivide** the selected cell until you reach pixel-perfect precision. It's the **recommended mode** for daily use because it:
+
+<Check>Works **everywhere** — apps, system UI, games, menubar, dock</Check>
+<Check>Requires **zero app-specific setup** or accessibility support</Check>
+<Check>Provides **extreme precision** with muscle memory</Check>
+<Check>Has **instant activation** with no lag or API calls</Check>
+
+## How It Works
+
+### The Subdivision Process
+
+<Steps>
+  <Step title="Screen divided into grid">
+    When you activate recursive grid mode, your screen is divided into a **2×2 grid** (default) with cells labeled:
+    
+    ```
+    u → i
+    ↓   ↓
+    j → k
+    ```
+    
+    - `u` = Upper-left
+    - `i` = Upper-right  
+    - `j` = Lower-left
+    - `k` = Lower-right
+  </Step>
+  
+  <Step title="Select a cell by pressing its key">
+    Press the key corresponding to the region you want. For example, press `i` to select the upper-right quadrant.
+  </Step>
+  
+  <Step title="Selected cell subdivides recursively">
+    The selected cell is now divided into a new 2×2 grid with the same keys:
+    
+    ```
+    u → i
+    ↓   ↓  
+    j → k
+    ```
+    
+    Your cursor moves to the center of this new grid.
+  </Step>
+  
+  <Step title="Repeat until precise">
+    Continue pressing keys to narrow down your selection. Each press subdivides the current cell further.
+  </Step>
+  
+  <Step title="Perform action or auto-exit">
+    Once you reach the desired precision (minimum cell size), press:
+    - `Shift+L` to left-click
+    - `Shift+R` to right-click  
+    - `Escape` to exit without clicking
+  </Step>
+</Steps>
+
+### Visual Example
+
+```
+Initial screen (2×2):
+┌─────────┬─────────┐
+│    u    │    i    │  Press 'i' to select upper-right
+├─────────┼─────────┤
+│    j    │    k    │
+└─────────┴─────────┘
+
+After pressing 'i' (subdivides upper-right):
+┌─────────┬──┬──┐
+│         │u │i │  Press 'j' to select lower-left
+│         ├──┼──┤
+│         │j │k │
+├─────────┴──┴──┤
+│               │
+└───────────────┘
+
+After pressing 'j' (subdivides that cell further):
+┌─────────┬────┐
+│         │ u i│  Now you're zoomed into a tiny region
+│         │ j k│  with pixel-level precision
+├─────────┴────┤
+│              │
+└──────────────┘
+```
+
+## Default Keybindings
+
+### Cell Selection Keys
+
+| Key | Position | Mnemonic |
+|-----|----------|----------|
+| `u` | Upper-left | **U**pper-left |
+| `i` | Upper-right | **I** (right side of keyboard) |
+| `j` | Lower-left | **J** (Vim down) |
+| `k` | Lower-right | **K** (Vim up, but lower-right) |
+
+<Info>
+  These keys are inspired by Vim's home row positioning and are optimized for ergonomics. You can customize them to any layout you prefer.
+</Info>
+
+### Control Keys  
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `Backspace` | **Backtrack** | Go up one level (undo last selection) |
+| `Space` | **Reset** | Return to initial full-screen grid |
+| `Escape` | **Exit** | Exit mode without performing action |
+
+### Action Keys
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `Shift+L` | Left Click | Click at current cursor position |
+| `Shift+R` | Right Click | Open context menu |
+| `Shift+M` | Middle Click | Middle mouse button |
+| `↑↓←→` | Nudge | Fine-tune cursor position by pixels |
+
+## Configuration
+
+### Basic Setup
+
+Add to your `config.toml`:
+
+```toml
+[recursive_grid]
+enabled = true
+
+# Grid dimensions (2×2 recommended for speed)
+grid_cols = 2
+grid_rows = 2
+
+# Selection keys (must be exactly cols × rows characters)
+keys = "uijk"
+
+# Minimum cell size before stopping subdivision
+min_size_width = 25   # pixels
+min_size_height = 25  # pixels
+
+# Maximum recursion depth
+max_depth = 10
+
+# Control keys
+reset_key = " "          # Space bar
+backspace_key = "Backspace"
+
+# Auto-exit after these actions (recommended)
+auto_exit_actions = ["left_click", "right_click"]
+```
+
+### Grid Layouts
+
+#### 2×2 Grid (Default — Fastest)
+
+```toml
+[recursive_grid]
+grid_cols = 2
+grid_rows = 2  
+keys = "uijk"
+```
+
+**Pros:**
+- Fastest to navigate (4 keys only)
+- Easy to memorize
+- Optimal for most screens
+
+**Cons:**
+- Requires more subdivisions for precision
+
+#### 3×3 Grid (Balanced)
+
+```toml
+[recursive_grid]
+grid_cols = 3
+grid_rows = 3
+keys = "gcrhtnmwv"  # 9 unique characters
+```
+
+**Layout:**
+```
+g → c → r
+↓   ↓   ↓
+h → t → n
+↓   ↓   ↓  
+m → w → v
+```
+
+**Pros:**
+- Fewer subdivisions needed
+- More direct selection
+
+**Cons:**
+- More keys to remember
+- Slower initial selection
+
+#### 4×2 Grid (Widescreen Optimized)
+
+```toml
+[recursive_grid]
+grid_cols = 4
+grid_rows = 2
+keys = "qwerasdf"  # 8 unique characters
+```
+
+**Layout:**
+```
+q → w → e → r
+↓   ↓   ↓   ↓
+a → s → d → f
+```
+
+**Pros:**
+- Optimized for ultrawide monitors
+- Home row keys
+
+**Cons:**
+- Uneven subdivision (horizontal bias)
+
+### Per-Depth Layer Customization
+
+You can use **different grid layouts at different recursion depths**:
+
+```toml
+[recursive_grid]
+# Default layout (used at all depths unless overridden)
+grid_cols = 2
+grid_rows = 2  
+keys = "uijk"
+
+# First subdivision: use 4×2 for wide initial selection
+[[recursive_grid.layers]]
+depth = 0
+grid_cols = 4
+grid_rows = 2
+keys = "qwerasdf"
+
+# Second subdivision: use 3×3 for medium precision
+[[recursive_grid.layers]]
+depth = 1  
+grid_cols = 3
+grid_rows = 3
+keys = "gcrhtnmwv"
+
+# Depth 2+: falls back to default 2×2 / "uijk" for final precision
+```
+
+<Tip>
+  Start with a larger grid (3×3 or 4×2) for the first level to quickly narrow down the region, then switch to 2×2 for fast final positioning.
+</Tip>
+
+### Visual Customization
+
+Customize colors, fonts, and appearance:
+
+```toml
+[recursive_grid.ui]
+# Grid lines
+line_color_light = "#FF007A9E"  # Teal for light mode
+line_color_dark = "#FF00CFCF"   # Cyan for dark mode
+line_width = 1
+
+# Cell highlighting
+highlight_color_light = "#4D007A9E"  # Semi-transparent teal
+highlight_color_dark = "#4D00CFCF"   # Semi-transparent cyan
+
+# Cell labels
+text_color_light = "#FF007A9E"
+text_color_dark = "#FF00CFCF"
+font_size = 10
+font_family = "SF Mono"  # Empty string "" = system font
+
+# Label backgrounds (optional)
+label_background = false  # Set true to add rounded backgrounds
+label_background_color_light = "#FFAAEEFF"
+label_background_color_dark = "#FF003554"
+```
+
+### Sub-Key Preview
+
+Show a **miniature preview** of the next grid inside each cell:
+
+```toml
+[recursive_grid.ui]
+# Enable preview of subdivision keys inside cells
+sub_key_preview = true
+sub_key_preview_font_size = 8
+sub_key_preview_text_color_light = "#66007A9E"
+sub_key_preview_text_color_dark = "#6600CFCF"
+
+# Hide preview when cells get too small
+# (preview hides when sub-cell size < font_size × multiplier)
+sub_key_preview_autohide_multiplier = 1.5
+```
+
+<Info>
+  Sub-key preview is helpful when learning the mode or using non-default grid layouts. Disable it once you've built muscle memory.
+</Info>
+
+## Advanced Techniques
+
+### Muscle Memory Patterns
+
+With practice, you'll develop muscle memory for common screen regions:
+
+```
+ii   → Top-right corner (notifications, close buttons)
+uj   → Left sidebar (app navigation)  
+kk   → Bottom-right (status bar, scrollbar)
+jj   → Bottom-left (dock area)
+uuu  → Top-left corner (menu bar)
+```
+
+### Backtracking Strategy
+
+Made a wrong selection? Use `Backspace` to go up one level:
+
+```
+1. Press 'i' (upper-right)
+2. Oops, meant to go lower. Press Backspace.
+3. Now press 'k' (lower-right)
+```
+
+### Reset for Quick Repositioning
+
+If you're deep in a subdivision and want to start over:
+
+```  
+1. Press Space (reset key) to return to initial grid
+2. Select new path from the beginning
+```
+
+Alternatively, just press `Escape` and reactivate the mode.
+
+### Combining with Direct Actions
+
+Stay in the mode while performing multiple actions:
+
+```toml
+[recursive_grid]
+# Don't auto-exit on these actions
+auto_exit_actions = []  # Empty list = never auto-exit
+```
+
+Then:
+1. Navigate to position with `u`/`i`/`j`/`k`
+2. Press `Shift+L` to click (mode stays active)
+3. Press `Space` to reset grid
+4. Navigate to next position
+5. Press `Shift+L` again
+
+## Use Cases
+
+### Clicking Anywhere in System UI
+
+<CardGroup cols={2}>
+  <Card title="Menu Bar Items" icon="bars">
+    Menu bar icons don't always expose accessibility APIs. Recursive grid works 100% of the time.
+  </Card>
+  <Card title="Dock Icons" icon="window-restore">
+    Click any dock icon with precision, even with magnification enabled.
+  </Card>
+  <Card title="Notification Center" icon="bell">
+    Navigate notifications and widgets that accessibility APIs can't reach.
+  </Card>
+  <Card title="Stage Manager" icon="layer-group">
+    Click window previews and app groups reliably.
+  </Card>
+</CardGroup>
+
+### Design & Creative Apps
+
+- **Figma/Sketch:** Click precise canvas positions
+- **Photoshop/Illustrator:** Select specific pixels or objects  
+- **Video editors:** Scrub timeline or click small UI elements
+
+### Games & Custom UI
+
+Apps with custom UI frameworks (games, 3D tools) often don't support accessibility APIs. Recursive grid works perfectly:
+
+- Click buttons in game menus
+- Select inventory items
+- Navigate custom toolbars
+
+### Multi-Monitor Workflows
+
+Recursive grid automatically activates on the screen where your mouse cursor is located. To switch screens:
+
+1. Use grid mode (`Cmd+Shift+G`) to quickly jump to the other monitor
+2. Then activate recursive grid (`Cmd+Shift+C`) for precision on that screen
+
+## Troubleshooting
+
+### Grid lines not visible
+
+**Cause:** Colors may be too transparent or conflict with background.
+
+**Solution:**
+```toml
+[recursive_grid.ui]
+line_width = 2  # Thicker lines
+line_color_light = "#FFFF0000"  # Bright red for testing
+```
+
+### Subdivisions too small/large
+
+**Cause:** Minimum size settings.
+
+**Solution:**
+```toml
+[recursive_grid]
+min_size_width = 50   # Larger cells (less precision)
+min_size_height = 50
+# OR
+min_size_width = 15   # Smaller cells (more precision, more subdivisions)
+min_size_height = 15
+```
+
+### Too many subdivisions needed
+
+**Cause:** 2×2 grid requires many steps.
+
+**Solution:** Use 3×3 grid or per-depth layers:
+```toml
+[recursive_grid]
+grid_cols = 3
+grid_rows = 3
+keys = "gcrhtnmwv"
+```
+
+### Keys conflict with existing hotkeys
+
+**Cause:** Selection keys conflict with app shortcuts.
+
+**Solution:** Use different keys:
+```toml
+[recursive_grid]
+keys = "asdf"  # Or any 4 characters you prefer
+```
+
+## Comparison with Other Tools
+
+| Feature | Neru Recursive Grid | Warpd | Mouseless |
+|---------|---------------------|-------|----------|
+| Grid subdivision | ✅ Recursive | ✅ Recursive | ❌ Single level |
+| Per-depth customization | ✅ Yes | ❌ No | ❌ No |
+| Backtracking | ✅ Yes | ✅ Yes | ❌ No |
+| Free & Open Source | ✅ Yes | ✅ Yes | ❌ Paid |
+| macOS Native | ✅ Yes | ❌ Linux-first | ✅ Yes |
+| Visual sub-key preview | ✅ Yes | ❌ No | ❌ No |
+
+## Performance
+
+- **Activation time:** < 10ms (instant)
+- **Memory usage:** ~1-2MB (with prewarming)
+- **CPU usage:** < 0.1% when idle
+- **Works offline:** Yes, no network calls
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Grid Mode" icon="table-cells" href="/concepts/grid-mode">
+    Learn about non-recursive grid navigation
+  </Card>
+  <Card title="Hints Mode" icon="hand-pointer" href="/concepts/hints-mode">
+    Accessibility-based element labeling
+  </Card>
+  <Card title="Scroll Mode" icon="scroll" href="/concepts/scroll-mode">
+    Vim-style scrolling anywhere
+  </Card>
+  <Card title="Configuration Reference" icon="gear" href="/guides/configuration">
+    Full recursive grid configuration options
+  </Card>
+</CardGroup>

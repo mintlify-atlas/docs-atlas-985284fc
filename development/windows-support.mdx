@@ -1,0 +1,391 @@
+---
+title: "Windows Support"
+description: "Windows implementation status and contribution opportunities"
+---
+
+## Current Status
+
+Windows support is currently in the **foundation phase**. The architecture and interfaces are in place, but native implementations for accessibility, event capture, and overlays require community contribution.
+
+<Note>
+**Stub Implementations**
+
+All Windows-specific adapters currently return `CodeNotSupported`. These stubs serve as clear integration points for contributors to implement real functionality.
+</Note>
+
+## Implementation Status
+
+### Infrastructure Components
+
+| Component | Status | Priority | Difficulty |
+| :-------- | :----: | :------: | :--------: |
+| **Screen bounds / cursor** | 🔲 Stub | High | Easy |
+| **Global hotkeys** | 🔲 Stub | High | Medium |
+| **Keyboard event tap** | 🔲 Stub | High | Hard |
+| **Accessibility (UIA)** | 🔲 Stub | High | Hard |
+| **UI overlays** | 🔲 Stub | High | Medium |
+| **App watcher** | 🔲 Stub | Medium | Medium |
+| **Dark mode detection** | 🔲 Stub | Low | Easy |
+| **Notifications / alerts** | 🔲 Stub | Low | Easy |
+| **Config / log directories** | ✅ Complete | Low | N/A |
+
+<Info>
+**Legend**
+
+- ✅ = Fully Implemented
+- 🔲 = Stub (Needs Implementation)
+</Info>
+
+## Required Technologies
+
+### UI Automation (UIA)
+
+UI Automation is the Windows equivalent of macOS Accessibility APIs. It provides programmatic access to UI elements.
+
+**Key Capabilities Needed:**
+
+- Query accessible UI element trees
+- Get element properties (position, control type, name)
+- Perform actions (invoke, click, focus)
+- Monitor application focus changes
+
+**Integration Points:**
+
+- `internal/core/infra/platform/windows/accessibility.go`
+- `internal/core/infra/accessibility/adapter_windows.go`
+
+**Resources:**
+
+- [UI Automation Overview](https://docs.microsoft.com/en-us/windows/win32/winauto/entry-uiauto-win32)
+- [UI Automation COM APIs](https://docs.microsoft.com/en-us/windows/win32/winauto/uiauto-entry-uiautomationclient)
+
+### Windows Hooks
+
+Windows provides low-level hooks for global keyboard interception:
+
+**Key Capabilities Needed:**
+
+- Register global hotkeys using `RegisterHotKey`
+- Install low-level keyboard hook with `SetWindowsHookEx(WH_KEYBOARD_LL, ...)`
+- Suppress/passthrough key events
+- Handle hook events on dedicated thread
+
+**Integration Points:**
+
+- `internal/core/infra/hotkeys/manager_windows.go`
+- `internal/core/infra/eventtap/eventtap_windows.go`
+
+**Resources:**
+
+- [Keyboard Hooks](https://docs.microsoft.com/en-us/windows/win32/winmsg/hooks)
+- [RegisterHotKey](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey)
+
+### Win32 / WinUI Overlays
+
+Windows overlays require creating transparent, layered windows:
+
+**Key Capabilities Needed:**
+
+- Create layered windows with `WS_EX_LAYERED` style
+- Set transparency using `SetLayeredWindowAttributes`
+- Position windows above all others with `HWND_TOPMOST`
+- Make windows click-through with `WS_EX_TRANSPARENT`
+
+**Integration Points:**
+
+- `internal/app/components/hints/overlay_windows.go`
+- `internal/app/components/grid/overlay_windows.go`
+- `internal/app/components/scroll/overlay_windows.go`
+
+**Resources:**
+
+- [Layered Windows](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-features#layered-windows)
+- [WinUI 3 Windows](https://docs.microsoft.com/en-us/windows/apps/windows-app-sdk/)
+
+## Contribution Opportunities
+
+### Quick Wins (Good First Issues)
+
+<CardGroup cols={2}>
+  <Card title="Screen Bounds & Cursor" icon="desktop">
+    **Difficulty**: Easy
+    
+    Use `GetSystemMetrics`, `GetCursorPos`, and `EnumDisplayMonitors` APIs.
+    
+    **File**: `internal/core/infra/platform/windows/system.go`
+  </Card>
+  <Card title="Dark Mode Detection" icon="moon">
+    **Difficulty**: Easy
+    
+    Read registry key `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`.
+    
+    **File**: `internal/core/infra/platform/windows/system.go`
+  </Card>
+  <Card title="Notifications" icon="bell">
+    **Difficulty**: Easy
+    
+    Use Windows Toast Notifications API.
+    
+    **File**: `internal/core/infra/platform/windows/system.go`
+  </Card>
+</CardGroup>
+
+### Medium Priority
+
+<CardGroup cols={2}>
+  <Card title="Global Hotkeys" icon="keyboard">
+    **Difficulty**: Medium
+    
+    Implement using `RegisterHotKey` API.
+    
+    **File**: `internal/core/infra/hotkeys/manager_windows.go`
+  </Card>
+  <Card title="UI Overlays" icon="layer-group">
+    **Difficulty**: Medium
+    
+    Create layered windows with transparency and click-through.
+    
+    **Files**: `internal/app/components/*/overlay_windows.go`
+  </Card>
+  <Card title="App Watcher" icon="eye">
+    **Difficulty**: Medium
+    
+    Monitor window focus changes via `SetWinEventHook` with `EVENT_SYSTEM_FOREGROUND`.
+    
+    **File**: `internal/core/infra/appwatcher/platform_windows.go`
+  </Card>
+</CardGroup>
+
+### High Priority (Core Functionality)
+
+<CardGroup cols={2}>
+  <Card title="Keyboard Event Tap" icon="keyboard">
+    **Difficulty**: Hard
+    
+    Global keyboard interception for navigation modes using low-level hooks.
+    
+    **File**: `internal/core/infra/eventtap/eventtap_windows.go`
+  </Card>
+  <Card title="UI Automation Integration" icon="universal-access">
+    **Difficulty**: Hard
+    
+    Full UIA integration for Hints Mode.
+    
+    **File**: `internal/core/infra/platform/windows/accessibility.go`
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+### Setup Development Environment
+
+1. **Install Dependencies**:
+
+```powershell
+# Install Go (if not already installed)
+winget install GoLang.Go
+
+# Install Just task runner
+winget install Casey.Just
+
+# Install MinGW-w64 for CGo (if needed)
+winget install MSYS2.MSYS2
+```
+
+2. **Clone and Build**:
+
+```powershell
+git clone https://github.com/y3owk1n/neru.git
+cd neru
+just build
+```
+
+3. **Pick a Component**:
+
+Choose a stub implementation from the [Implementation Status](#implementation-status) table.
+
+4. **Follow the Porting Guide**:
+
+Read the [Porting Guide](/development/porting-guide) for step-by-step instructions.
+
+### Implementation Workflow
+
+1. **Find the stub** in the appropriate file (e.g., `system_windows.go`)
+2. **Replace `CodeNotSupported`** with real implementation
+3. **Add tests** (unit and integration)
+4. **Run CI locally**:
+
+```powershell
+just lint
+just vet
+just test
+just build
+```
+
+5. **Submit a PR** with focused changes
+
+## Architecture Notes
+
+### Build Tags
+
+All Windows-specific code uses the `//go:build windows` build tag:
+
+```go
+//go:build windows
+package windows
+
+import (
+    "github.com/y3owk1n/neru/internal/core/errors"
+)
+
+func (s *WindowsSystem) GetScreenBounds() (Rect, error) {
+    // TODO: Implement using Win32 APIs
+    return Rect{}, derrors.New(derrors.CodeNotSupported,
+        "GetScreenBounds not yet implemented on windows")
+}
+```
+
+### CGo and syscall Usage
+
+Windows implementations can use either CGo or Go's `syscall` package:
+
+**Option 1: CGo** (for complex Win32 APIs)
+
+```go
+/*
+#cgo LDFLAGS: -luser32
+#include <windows.h>
+*/
+import "C"
+
+func getScreenSize() (int, int) {
+    width := C.GetSystemMetrics(C.SM_CXSCREEN)
+    height := C.GetSystemMetrics(C.SM_CYSCREEN)
+    return int(width), int(height)
+}
+```
+
+**Option 2: syscall** (for simple APIs)
+
+```go
+import "syscall"
+
+var (
+    user32 = syscall.NewLazyDLL("user32.dll")
+    getSystemMetrics = user32.NewProc("GetSystemMetrics")
+)
+
+func getScreenSize() (int, int) {
+    width, _, _ := getSystemMetrics.Call(0x00) // SM_CXSCREEN
+    height, _, _ := getSystemMetrics.Call(0x01) // SM_CYSCREEN
+    return int(width), int(height)
+}
+```
+
+### Application Identifiers
+
+On Windows, application identifiers use `AppUserModelID` or executable names:
+
+| Format | Example | Usage |
+| :----- | :------ | :---- |
+| **AppUserModelID** | `Microsoft.WindowsCalculator_8wekyb3d8bbwe!App` | Modern UWP apps |
+| **Executable** | `notepad.exe`, `chrome.exe` | Classic Win32 apps |
+
+The `FocusedAppBundleID` method should return the appropriate identifier based on the application type.
+
+## Testing on Windows
+
+Integration tests require a real Windows environment:
+
+```go
+//go:build integration && windows
+package windows
+
+import "testing"
+
+func TestGetScreenBounds_Integration(t *testing.T) {
+    sys := NewSystem()
+    bounds, err := sys.GetScreenBounds()
+    if err != nil {
+        t.Fatalf("GetScreenBounds failed: %v", err)
+    }
+    if bounds.Width <= 0 || bounds.Height <= 0 {
+        t.Errorf("Invalid screen bounds: %+v", bounds)
+    }
+}
+```
+
+Run integration tests:
+
+```powershell
+just test-integration
+```
+
+## Example: Implementing Screen Bounds
+
+Here's a complete example of implementing `GetScreenBounds` on Windows:
+
+```go
+//go:build windows
+package windows
+
+import (
+    "syscall"
+    "unsafe"
+)
+
+var (
+    user32 = syscall.NewLazyDLL("user32.dll")
+    getSystemMetrics = user32.NewProc("GetSystemMetrics")
+)
+
+const (
+    SM_CXSCREEN = 0
+    SM_CYSCREEN = 1
+)
+
+type Rect struct {
+    X, Y, Width, Height int
+}
+
+func (s *WindowsSystem) GetScreenBounds() (Rect, error) {
+    width, _, err := getSystemMetrics.Call(SM_CXSCREEN)
+    if width == 0 {
+        return Rect{}, err
+    }
+    
+    height, _, err := getSystemMetrics.Call(SM_CYSCREEN)
+    if height == 0 {
+        return Rect{}, err
+    }
+    
+    return Rect{
+        X:      0,
+        Y:      0,
+        Width:  int(width),
+        Height: int(height),
+    }, nil
+}
+```
+
+## Get Help
+
+<CardGroup cols={2}>
+  <Card title="GitHub Discussions" icon="github" href="https://github.com/y3owk1n/neru/discussions">
+    Ask questions and share progress
+  </Card>
+  <Card title="Cross-Platform Issues" icon="tags" href="https://github.com/y3owk1n/neru/issues?q=is%3Aopen+is%3Aissue+label%3Across-platform">
+    Browse Windows-related tasks
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Porting Guide" icon="book" href="/development/porting-guide">
+    Step-by-step implementation instructions
+  </Card>
+  <Card title="Cross-Platform Architecture" icon="diagram-project" href="/development/cross-platform">
+    Understand the overall design
+  </Card>
+</CardGroup>

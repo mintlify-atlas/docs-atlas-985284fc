@@ -1,0 +1,394 @@
+---
+title: "Grid Mode"
+description: "Direct coordinate-based navigation for quick coarse positioning"
+---
+
+## Overview
+
+Grid Mode divides your screen into a **static coordinate grid** where each cell has a unique label. Unlike recursive grid, you type the complete cell label directly without subdivision, making it ideal for **quick jumps** to specific screen regions.
+
+<Check>Works **everywhere** — no accessibility APIs required</Check>
+<Check>**Fastest** for coarse navigation (2-3 keystrokes)</Check>
+<Check>Perfect for **multi-monitor** setups</Check>
+<Check>Great companion to **scroll mode**</Check>
+
+## How It Works
+
+<Steps>
+  <Step title="Activate grid mode">
+    Press `Cmd+Shift+G` (default) to activate. Your screen is divided into a grid with labeled cells.
+  </Step>
+  
+  <Step title="Type the cell label">
+    Each cell has a unique 2-character label (like `ab`, `cd`, `mf`). Type the label to select that cell.
+    
+    As you type, matching cells are highlighted and non-matching cells fade out.
+  </Step>
+  
+  <Step title="Cursor moves to selected cell">
+    When you complete the label, your cursor jumps to the center of that cell.
+  </Step>
+  
+  <Step title="Perform action or enter subgrid">
+    - Press `Shift+L` to left-click
+    - Press `Shift+R` to right-click
+    - Continue typing (9 more characters) to enter a **3×3 subgrid** for precision
+    - Press `Escape` to exit
+  </Step>
+</Steps>
+
+## Visual Example
+
+```
+Grid layout with default characters (abcdefghijklmnpqrstuvwxyz):
+
+┌────┬────┬────┬────┬────┐
+│ aa │ ab │ ac │ ad │ ae │
+├────┼────┼────┼────┼────┤
+│ ba │ bb │ bc │ bd │ be │
+├────┼────┼────┼────┼────┤
+│ ca │ cb │ cc │ cd │ ce │
+├────┼────┼────┼────┼────┤
+│ da │ db │ dc │ dd │ de │
+└────┴────┴────┴────┴────┘
+
+Type 'bd' → cursor jumps to that cell
+```
+
+### Subgrid for Precision
+
+After selecting a cell, type additional characters to enter a 3×3 subgrid:
+
+```
+After typing 'bd', the cell subdivides:
+
+┌────┬────┬────┬────┬────┐
+│ aa │ ab │ ac │ ad │ ae │
+├────┼────┼────┼────┼────┤
+│ ba │ g│h│i │ bd │ be │  ← Cell 'bb' now shows 3×3 subgrid
+│    │ j│k│l │    │    │
+│    │ m│n│p │    │    │
+├────┼────┼────┼────┼────┤
+│ ca │ cb │ cc │ cd │ ce │
+└────┴────┴────┴────┴────┘
+
+Type 'k' → cursor jumps to center of subgrid
+```
+
+## Default Configuration
+
+### Grid Characters
+
+By default, grid mode uses **lowercase letters** (excluding 'o' to avoid confusion with zero):
+
+```toml
+[grid]
+characters = "abcdefghijklmnpqrstuvwxyz"
+```
+
+### Subgrid Keys
+
+Subgrid uses the same characters by default, but you can override:
+
+```toml
+[grid]  
+sublayer_keys = "asdfghjkl"  # Home row for subgrid
+```
+
+<Note>
+  Subgrid requires **at least 9 characters** for the 3×3 layout.
+</Note>
+
+## Keybindings
+
+### Input Keys
+
+| Action | Key | Description |
+|--------|-----|-------------|
+| **Type label** | Any grid character | Select cell by typing its label |
+| **Clear input** | `Space` (default) | Clear current input and start over |
+| **Backspace** | `Backspace` | Delete last typed character |
+| **Exit mode** | `Escape` | Exit grid mode |
+
+### Action Keys
+
+| Action | Key | Description |
+|--------|-----|-------------|
+| **Left Click** | `Shift+L` | Click at current cursor position |
+| **Right Click** | `Shift+R` | Open context menu |
+| **Middle Click** | `Shift+M` | Middle mouse button |
+| **Nudge** | `↑↓←→` | Fine-tune cursor position |
+
+## Configuration
+
+### Basic Setup
+
+```toml
+[grid]
+enabled = true
+
+# Characters for grid labels
+characters = "abcdefghijklmnpqrstuvwxyz"
+
+# Subgrid keys (9+ chars for 3×3 subgrid)
+sublayer_keys = "asdfghjkl"
+
+# Control keys
+reset_key = " "          # Space bar
+backspace_key = "Backspace"
+
+# Auto-exit after click
+auto_exit_actions = ["left_click", "right_click"]
+
+# Visual feedback
+live_match_update = true   # Highlight as you type
+hide_unmatched = true      # Dim non-matching cells
+```
+
+### Custom Character Sets
+
+#### Home Row Only
+
+```toml
+[grid]
+characters = "asdfghjkl"
+```
+
+**Pros:**
+- Fastest typing (no finger movement)
+- Ergonomic
+
+**Cons:**
+- Fewer cells (smaller grid)
+
+#### Numbers Only
+
+```toml
+[grid]
+characters = "1234567890"
+```
+
+**Pros:**
+- Easy to remember
+- Clear visual distinction
+
+**Cons:**
+- Only 10 characters (very small grid)
+
+#### Dvorak Layout
+
+```toml
+[grid]
+characters = "aoeuidhtns"
+```
+
+### Custom Row/Column Labels
+
+Override labels separately for rows and columns:
+
+```toml
+[grid]
+# Numbers for rows, letters for columns
+row_labels = "123456789"
+col_labels = "abcdefghij"
+```
+
+This creates labels like `1a`, `1b`, `2a`, `2b`, etc.
+
+<Tip>
+  Use row/column labels to match your mental model. For example, numbers for vertical position and letters for horizontal.
+</Tip>
+
+### Visual Customization
+
+```toml
+[grid.ui]
+# Cell appearance
+background_color_light = "#9900B4D8"
+background_color_dark = "#99003554"
+border_width = 1
+
+# Label text
+text_color_light = "#FF003554"
+text_color_dark = "#FFB3E8F5"
+font_size = 10
+font_family = "SF Mono"
+
+# Matched cells (as you type)
+matched_text_color_light = "#FFAAEEFF"
+matched_text_color_dark = "#FFFFFFFF"
+matched_background_color_light = "#B300CFCF"
+matched_background_color_dark = "#B300B4D8"
+```
+
+### Performance Settings
+
+```toml
+[grid]
+# Pre-compute grid on startup (faster activation, ~1.5MB RAM)
+prewarm_enabled = true
+
+# Periodic memory cleanup (enable if RAM is tight)
+enable_gc = false
+```
+
+## Use Cases
+
+### Quick Screen-Region Jumps
+
+**Scenario:** You have a large 4K monitor with multiple windows.
+
+1. Press `Cmd+Shift+G`
+2. Type `bd` to jump to top-right window
+3. Press `Escape` or let auto-exit handle it
+4. Continue working
+
+### Multi-Monitor Navigation
+
+**Scenario:** Cursor is on the wrong monitor.
+
+1. Press `Cmd+Shift+G`
+2. Type label for the other screen (grid spans all monitors)
+3. Cursor jumps to that monitor
+
+### Complementing Scroll Mode
+
+**Workflow:** Navigate a long document.
+
+```bash
+1. Cmd+Shift+G → Type 'mf' (jump to document area)
+2. Cmd+Shift+S → Enter scroll mode
+3. j/k → Scroll through content
+```
+
+### Dashboard Navigation
+
+**Scenario:** Complex dashboard with many panels.
+
+1. Memorize grid labels for common panels
+2. Press `Cmd+Shift+G` + label to jump instantly
+3. Build muscle memory for frequent actions
+
+## Comparison: Grid vs Recursive Grid
+
+| Feature | Grid Mode | Recursive Grid |
+|---------|-----------|----------------|
+| **Speed (Coarse)** | ⭐⭐⭐⭐⭐ Fastest | ⭐⭐⭐ Medium |
+| **Speed (Precise)** | ⭐⭐ Slow | ⭐⭐⭐⭐⭐ Fastest |
+| **Precision** | ⭐⭐⭐ (with subgrid) | ⭐⭐⭐⭐⭐ |
+| **Keystrokes** | 2-3 (coarse), 3-5 (precise) | 3-6 (precise) |
+| **Muscle Memory** | Harder (absolute labels) | Easier (relative keys) |
+| **Best For** | Quick jumps | Precise targeting |
+
+<Info>
+  **Pro tip:** Use grid mode to quickly jump to a general area, then switch to recursive grid (`Cmd+Shift+C`) for pixel-perfect precision.
+</Info>
+
+## Advanced Techniques
+
+### Memorize Common Cells
+
+For frequently used screen regions, memorize their grid labels:
+
+```
+mf → Center of screen
+aa → Top-left corner
+zz → Bottom-right corner  
+af → Top-right area
+```
+
+### Use Subgrid for Precision
+
+Instead of exiting and switching to recursive grid:
+
+1. Type main cell label (e.g., `bd`)
+2. Immediately type subgrid key (e.g., `k`)
+3. Cursor lands precisely in that sub-cell
+
+### Reset Key for Quick Recovery
+
+Made a typo? Press `Space` (reset key) to clear input and start over without exiting the mode.
+
+### Combine with Direct Actions
+
+Disable auto-exit to perform multiple actions:
+
+```toml
+[grid]
+auto_exit_actions = []  # Stay in mode after clicking
+```
+
+Then:
+1. Type `bd` + `Shift+L` (click)
+2. Type `Space` (reset)
+3. Type `mf` + `Shift+R` (right-click)
+4. Press `Escape` when done
+
+## Troubleshooting
+
+### Grid too small/large
+
+**Cause:** Character set determines grid size.
+
+**Solution:**
+```toml
+[grid]
+# More characters = larger grid
+characters = "abcdefghijklmnpqrstuvwxyz0123456789"
+
+# Fewer characters = smaller, faster grid
+characters = "asdfghjkl"
+```
+
+### Can't remember cell labels
+
+**Cause:** Absolute labels are harder to memorize.
+
+**Solution:** Use recursive grid mode instead, which uses relative directional keys (`u`/`i`/`j`/`k`).
+
+### Subgrid not appearing
+
+**Cause:** Not enough subgrid keys configured.
+
+**Solution:**
+```toml
+[grid]
+sublayer_keys = "asdfghjkl"  # At least 9 characters required
+```
+
+### Typing too slow, mode times out
+
+**Cause:** There's no timeout by default, but if you exit accidentally, you might be hitting an exit key.
+
+**Solution:** Check your exit keys:
+```toml
+[general]
+mode_exit_keys = ["Escape"]  # Only Escape exits
+
+[grid]
+mode_exit_keys = []  # No additional exit keys for grid
+```
+
+## Performance
+
+- **Activation time:** < 10ms (with prewarming)
+- **Memory usage:** ~1.5MB (prewarmed grid data)
+- **CPU usage:** < 0.1% when idle
+- **Works offline:** Yes
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Recursive Grid" icon="grid" href="/concepts/recursive-grid">
+    Learn recursive subdivision for maximum precision
+  </Card>
+  <Card title="Hints Mode" icon="hand-pointer" href="/concepts/hints-mode">
+    Label-based element navigation
+  </Card>
+  <Card title="Scroll Mode" icon="scroll" href="/concepts/scroll-mode">
+    Vim-style scrolling
+  </Card>
+  <Card title="Configuration Reference" icon="gear" href="/guides/configuration">
+    Full grid mode configuration options
+  </Card>
+</CardGroup>

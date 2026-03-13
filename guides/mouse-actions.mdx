@@ -1,0 +1,410 @@
+---
+title: Mouse Actions
+description: Perform mouse clicks and movements within navigation modes
+---
+
+Mouse actions allow you to click, drag, and move the cursor using keyboard commands within navigation modes (hints, grid, recursive grid).
+
+## Overview
+
+Mouse actions can be triggered in two ways:
+
+<CardGroup cols={2}>
+  <Card title="Direct Actions" icon="bolt">
+    Immediate click/movement at current cursor position
+  </Card>
+  <Card title="Action Keybindings" icon="keyboard">
+    Perform actions after selecting position in navigation mode
+  </Card>
+</CardGroup>
+
+## Direct Mouse Actions
+
+Perform actions immediately at the current cursor position:
+
+```bash
+neru action left_click          # Left click
+neru action right_click         # Right click
+neru action middle_click        # Middle click
+neru action mouse_down          # Press and hold mouse button
+neru action mouse_up            # Release mouse button
+```
+
+### Mouse Movement
+
+<Tabs>
+  <Tab title="Absolute Position">
+    Move to specific screen coordinates:
+    
+    ```bash
+    neru action move_mouse --x 500 --y 300
+    ```
+    
+    Coordinates are in pixels from the top-left corner of the main screen.
+  </Tab>
+  
+  <Tab title="Screen Center">
+    Move to the center of the active screen:
+    
+    ```bash
+    neru action move_mouse --center
+    ```
+    
+    With offset from center:
+    ```bash
+    # Both axes
+    neru action move_mouse --center --x 50 --y -30
+    
+    # Single axis (omitted axis defaults to 0)
+    neru action move_mouse --center --x 100
+    ```
+  </Tab>
+  
+  <Tab title="Relative Movement">
+    Move by delta from current position:
+    
+    ```bash
+    neru action move_mouse_relative --dx 10 --dy -5
+    ```
+    
+    - Positive `dx`: move right
+    - Negative `dx`: move left
+    - Positive `dy`: move down
+    - Negative `dy`: move up
+  </Tab>
+</Tabs>
+
+## Action Keybindings in Navigation Modes
+
+While in hints, grid, or recursive grid mode, you can use keyboard shortcuts to perform mouse actions after selecting a position.
+
+### Default Keybindings
+
+```toml
+[action.key_bindings]
+left_click = "Shift+L"
+right_click = "Shift+R"
+middle_click = "Shift+M"
+mouse_down = "Shift+I"
+mouse_up = "Shift+U"
+move_mouse_up = "Up"
+move_mouse_down = "Down"
+move_mouse_left = "Left"
+move_mouse_right = "Right"
+```
+
+### Workflow Example
+
+1. Enter navigation mode:
+   ```bash
+   neru hints
+   ```
+
+2. Type hint label to select position (e.g., `aa`)
+
+3. Fine-tune position with arrow keys:
+   - `Up` / `Down` / `Left` / `Right` to adjust cursor
+
+4. Perform action:
+   - `Shift+L` for left click
+   - `Shift+R` for right click
+   - `Shift+M` for middle click
+
+<Note>
+  Arrow keys move the cursor by the step size configured in `action.move_mouse_step` (default: 10 pixels).
+</Note>
+
+## Configuration
+
+### Mouse Movement Step Size
+
+<ParamField path="action.move_mouse_step" type="integer" default="10">
+  Pixels per arrow key press in navigation modes (≥ 1).
+  
+  ```toml
+  [action]
+  move_mouse_step = 10   # Default: ~1mm on typical display
+  # move_mouse_step = 5   # Finer control
+  # move_mouse_step = 20  # Faster movement
+  ```
+</ParamField>
+
+### Custom Keybindings
+
+Customize action keys to match your preferences:
+
+<CodeGroup>
+```toml Default
+[action.key_bindings]
+left_click = "Shift+L"
+right_click = "Shift+R"
+middle_click = "Shift+M"
+mouse_down = "Shift+I"
+mouse_up = "Shift+U"
+move_mouse_up = "Up"
+move_mouse_down = "Down"
+move_mouse_left = "Left"
+move_mouse_right = "Right"
+```
+
+```toml Vim-style
+[action.key_bindings]
+left_click = "Return"
+right_click = "Shift+Return"
+middle_click = "Ctrl+Return"
+move_mouse_up = "k"
+move_mouse_down = "j"
+move_mouse_left = "h"
+move_mouse_right = "l"
+```
+
+```toml Single-hand
+[action.key_bindings]
+left_click = "f"
+right_click = "d"
+middle_click = "s"
+move_mouse_up = "w"
+move_mouse_down = "s"
+move_mouse_left = "a"
+move_mouse_right = "d"
+```
+</CodeGroup>
+
+## Auto-exit After Actions
+
+Configure modes to exit automatically after performing specific actions:
+
+```toml
+[hints]
+auto_exit_actions = ["left_click", "middle_click"]
+
+[grid]
+auto_exit_actions = ["left_click"]
+
+[recursive_grid]
+auto_exit_actions = ["left_click", "right_click"]
+```
+
+<Warning>
+  Avoid including `move_mouse_relative` in `auto_exit_actions`. This will cause the mode to exit on every arrow key press, which is usually undesirable.
+</Warning>
+
+## Using --action Flag
+
+The `--action` flag performs an action automatically when a location is selected:
+
+```bash
+neru hints --action left_click           # Left-click via hints
+neru hints --action right_click          # Right-click via hints
+neru grid --action left_click            # Left-click via grid
+neru recursive_grid --action left_click  # Left-click via recursive grid
+```
+
+### How --action Works
+
+<Tabs>
+  <Tab title="Hints Mode">
+    When you satisfy the label (e.g., type `aa`), the action executes immediately.
+    
+    **Example workflow:**
+    ```bash
+    neru hints --action left_click
+    # Type "aa" → cursor moves + left click → mode exits
+    ```
+    
+    This imitates Vimium-style browser navigation.
+  </Tab>
+  
+  <Tab title="Grid Mode">
+    Action executes after the final sublayer selection (3×3 grid).
+    
+    **Example workflow:**
+    ```bash
+    neru grid --action left_click
+    # Type "ab" → select cell
+    # Select from 3×3 sublayer → click → mode exits
+    ```
+  </Tab>
+  
+  <Tab title="Recursive Grid">
+    Action executes after reaching maximum depth.
+    
+    **Example workflow:**
+    ```bash
+    neru recursive_grid --action left_click
+    # Press "u" → narrows to upper-left
+    # Press "k" → narrows further
+    # ... continue until max depth → click → mode exits
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  The `--action` flag is most useful for hints mode. For grid and recursive grid modes, consider using `auto_exit_actions` in your config file instead.
+</Note>
+
+## Drag and Drop
+
+Perform drag-and-drop operations by combining `mouse_down` and `mouse_up`:
+
+1. Enter hints mode and select start position:
+   ```bash
+   neru hints
+   # Type hint label (e.g., "aa")
+   ```
+
+2. Hold mouse button:
+   ```bash
+   # Press Shift+I (or your mouse_down binding)
+   ```
+
+3. Exit mode and select end position:
+   ```bash
+   # Press Esc to exit hints
+   neru hints
+   # Type hint label for drop location (e.g., "bb")
+   ```
+
+4. Release mouse button:
+   ```bash
+   # Press Shift+U (or your mouse_up binding)
+   ```
+
+## Advanced Usage
+
+### Scripted Mouse Actions
+
+Chain mouse actions in shell scripts:
+
+```bash
+#!/bin/bash
+# Click at specific position
+neru action move_mouse --x 500 --y 300
+neru action left_click
+
+# Drag from one position to another
+neru action move_mouse --x 100 --y 100
+neru action mouse_down
+neru action move_mouse --x 500 --y 500
+neru action mouse_up
+```
+
+### Combining with Hotkeys
+
+Use hotkeys to trigger actions:
+
+```toml
+[hotkeys]
+# Quick clicks
+"Cmd+Alt+L" = "action left_click"
+"Cmd+Alt+R" = "action right_click"
+
+# Center cursor
+"Cmd+Alt+C" = "action move_mouse --center"
+
+# Navigation with auto-click
+"Cmd+Shift+Space" = "hints --action left_click"
+"Cmd+Shift+G" = "grid --action left_click"
+```
+
+## Smooth Cursor Movement
+
+Animate cursor movement between positions:
+
+<ParamField path="smooth_cursor.move_mouse_enabled" type="boolean" default="false">
+  Enable smooth cursor animation.
+</ParamField>
+
+<ParamField path="smooth_cursor.steps" type="integer" default="10">
+  Number of intermediate positions (≥ 1).
+</ParamField>
+
+<ParamField path="smooth_cursor.delay" type="integer" default="1">
+  Milliseconds between steps (≥ 0).
+</ParamField>
+
+```toml
+[smooth_cursor]
+move_mouse_enabled = true
+steps = 10      # More steps = smoother but slower
+delay = 5       # Higher delay = more visible animation
+```
+
+<Note>
+  Smooth cursor is useful for:
+  - Visual tracking of cursor movement
+  - Large jumps across screen
+  - Aesthetic preference
+  
+  Disable it for fastest navigation.
+</Note>
+
+## Available Actions
+
+| Action | Description | Usage |
+|--------|-------------|-------|
+| `left_click` | Left mouse button click | Most common click action |
+| `right_click` | Right mouse button click | Context menus, alternative actions |
+| `middle_click` | Middle mouse button click | Open links in new tab (browsers) |
+| `double_click` | Double-click | Not directly supported (click twice) |
+| `mouse_down` | Press and hold mouse button | Start of drag operation |
+| `mouse_up` | Release mouse button | End of drag operation |
+| `move_mouse` | Move to absolute position | Direct cursor positioning |
+| `move_mouse_relative` | Move by delta | Fine-tune cursor position |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Arrow keys not moving cursor">
+    **Check:**
+    - You're in a navigation mode (hints/grid/recursive_grid)
+    - Arrow key bindings are not conflicting with other keys
+    - `action.move_mouse_step` is greater than 0
+    
+    **Solution:**
+    ```toml
+    [action]
+    move_mouse_step = 10  # Ensure this is > 0
+    ```
+  </Accordion>
+  
+  <Accordion title="Action keybindings not working">
+    **Check:**
+    - Keybindings don't conflict with mode-specific keys
+    - Config has been reloaded: `neru config reload`
+    
+    **View current config:**
+    ```bash
+    neru config dump
+    ```
+  </Accordion>
+  
+  <Accordion title="Drag and drop not working">
+    **Ensure:**
+    1. `mouse_down` is pressed before moving cursor
+    2. Cursor is moved to new position
+    3. `mouse_up` is pressed to complete drop
+    
+    **Verify with logs:**
+    ```bash
+    tail -f ~/Library/Logs/neru/app.log
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Navigation Modes" icon="map" href="/concepts/navigation-modes">
+    Learn about hints, grid, and recursive grid modes
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Explore all configuration options
+  </Card>
+  <Card title="Hotkeys" icon="keyboard" href="/guides/hotkeys">
+    Configure global keyboard shortcuts
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/daemon-control">
+    Full command-line interface documentation
+  </Card>
+</CardGroup>

@@ -1,0 +1,331 @@
+---
+title: App Exclusions
+description: Disable Neru in specific applications using bundle IDs
+---
+
+App exclusions allow you to prevent Neru from activating in specific applications. This is useful for terminal apps, remote desktop clients, or any application where you prefer keyboard-only workflows.
+
+## Overview
+
+When an app is excluded, Neru will:
+- Not respond to hotkeys while that app is active
+- Ignore CLI commands to enter navigation modes
+- Remain running in the background
+
+<Note>
+  Excluded apps are configured per bundle ID, not by application name. This ensures reliable identification across app updates and renames.
+</Note>
+
+## Configuration
+
+Add bundle IDs to the `excluded_apps` array in your config:
+
+```toml
+[general]
+excluded_apps = [
+    "com.apple.Terminal",
+    "com.googlecode.iterm2",
+    "com.microsoft.rdc.macos",
+]
+```
+
+<ParamField path="general.excluded_apps" type="array" default="[]">
+  List of bundle IDs where Neru won't activate. Empty array means no exclusions.
+</ParamField>
+
+## Finding Bundle IDs
+
+### Method 1: Using osascript (macOS)
+
+Get the bundle ID of any running application:
+
+```bash
+osascript -e 'id of app "Safari"'
+# Output: com.apple.Safari
+
+osascript -e 'id of app "Visual Studio Code"'
+# Output: com.microsoft.VSCode
+```
+
+### Method 2: Using mdls (macOS)
+
+Get bundle ID from application path:
+
+```bash
+mdls -name kMDItemCFBundleIdentifier -r /Applications/Safari.app
+# Output: com.apple.Safari
+```
+
+### Method 3: Info.plist
+
+Manually inspect the Info.plist file:
+
+```bash
+defaults read /Applications/Safari.app/Contents/Info CFBundleIdentifier
+# Output: com.apple.Safari
+```
+
+### Method 4: Activity Monitor
+
+1. Open **Activity Monitor** (Applications → Utilities)
+2. Find your application in the list
+3. Double-click the process
+4. Look for **Bundle Identifier** in the process info
+
+## Common Applications
+
+<Tabs>
+  <Tab title="Terminals">
+    ```toml
+    [general]
+    excluded_apps = [
+        "com.apple.Terminal",              # Terminal.app
+        "com.googlecode.iterm2",           # iTerm2
+        "co.zeit.hyper",                   # Hyper
+        "net.kovidgoyal.kitty",            # Kitty
+        "com.github.wez.wezterm",          # WezTerm
+        "org.alacritty",                   # Alacritty
+        "io.alacritty",                    # Alacritty (alternative)
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Remote Desktop">
+    ```toml
+    [general]
+    excluded_apps = [
+        "com.microsoft.rdc.macos",         # Microsoft Remote Desktop
+        "com.apple.ScreenSharing",         # Screen Sharing
+        "com.teamviewer.TeamViewer",       # TeamViewer
+        "com.realvnc.vncviewer",           # RealVNC Viewer
+        "com.thinprint.cloud.macos",       # VMware Horizon
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Virtual Machines">
+    ```toml
+    [general]
+    excluded_apps = [
+        "com.vmware.fusion",               # VMware Fusion
+        "com.parallels.desktop.console",  # Parallels Desktop
+        "org.virtualbox.app.VirtualBox",   # VirtualBox
+        "com.utmapp.UTM",                  # UTM
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Development">
+    ```toml
+    [general]
+    excluded_apps = [
+        "com.microsoft.VSCode",            # Visual Studio Code
+        "com.jetbrains.intellij",          # IntelliJ IDEA
+        "com.sublimetext.4",               # Sublime Text
+        "com.apple.dt.Xcode",              # Xcode
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Screen Sharing">
+    ```toml
+    [general]
+    excluded_apps = [
+        "us.zoom.xos",                     # Zoom
+        "com.microsoft.teams",             # Microsoft Teams
+        "com.google.meet",                 # Google Meet (web)
+        "com.tinyspeck.slackmacgap",       # Slack
+    ]
+    ```
+  </Tab>
+</Tabs>
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Terminal Apps" icon="terminal">
+    Exclude terminal apps where you prefer keyboard-only workflows (Vim, Emacs, tmux)
+  </Card>
+  <Card title="Remote Desktop" icon="desktop">
+    Prevent interference with remote machine's hotkeys and navigation
+  </Card>
+  <Card title="Virtual Machines" icon="server">
+    Avoid conflicts between host and guest OS keyboard shortcuts
+  </Card>
+  <Card title="Screen Sharing" icon="video">
+    Disable overlays during presentations (alternative to `hide_overlay_in_screen_share`)
+  </Card>
+  <Card title="Games" icon="gamepad">
+    Prevent Neru from capturing game controls
+  </Card>
+  <Card title="IDEs with Vim Mode" icon="code">
+    Exclude IDEs where you use built-in Vim keybindings
+  </Card>
+</CardGroup>
+
+## Configuration Examples
+
+<CodeGroup>
+```toml Terminal-focused
+[general]
+excluded_apps = [
+    "com.apple.Terminal",
+    "com.googlecode.iterm2",
+    "org.alacritty",
+]
+```
+
+```toml Remote Work
+[general]
+excluded_apps = [
+    "com.microsoft.rdc.macos",
+    "com.apple.ScreenSharing",
+    "com.teamviewer.TeamViewer",
+    "us.zoom.xos",
+]
+```
+
+```toml Developer Setup
+[general]
+excluded_apps = [
+    "com.apple.Terminal",
+    "com.googlecode.iterm2",
+    "com.microsoft.VSCode",
+    "com.jetbrains.intellij",
+]
+```
+
+```toml Minimal (Finder only)
+[general]
+excluded_apps = [
+    "com.apple.finder",
+]
+```
+</CodeGroup>
+
+## Testing Exclusions
+
+After adding exclusions:
+
+1. Reload configuration:
+   ```bash
+   neru config reload
+   ```
+
+2. Focus the excluded app
+
+3. Try triggering Neru with a hotkey (e.g., `Cmd+Shift+Space`)
+
+4. Verify that Neru does not activate
+
+<Note>
+  If Neru still activates, double-check the bundle ID with `osascript -e 'id of app "AppName"'`
+</Note>
+
+## Dynamic Exclusions
+
+Currently, Neru does not support dynamic exclusions (enabling/disabling apps at runtime). To modify exclusions:
+
+1. Edit your config file
+2. Run `neru config reload`
+
+Alternatively, restart the daemon:
+
+```bash
+pkill neru && neru launch
+```
+
+## Alternative: Per-app Hide Overlay
+
+For screen sharing apps specifically, consider using the screen share toggle instead:
+
+```toml
+[general]
+hide_overlay_in_screen_share = true
+```
+
+Or toggle dynamically:
+
+```bash
+neru toggle-screen-share
+```
+
+See [Screen Sharing](/guides/screen-sharing) for more details.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="App not being excluded">
+    **Check:**
+    - Bundle ID is correct (verify with `osascript -e 'id of app "AppName"'`)
+    - Config has been reloaded: `neru config reload`
+    - App is actually focused (not a different window)
+    
+    **Verify loaded config:**
+    ```bash
+    neru config dump | grep excluded_apps
+    ```
+  </Accordion>
+  
+  <Accordion title="Neru not working in any app after exclusion">
+    **Check:**
+    - You didn't accidentally exclude all apps
+    - No typos in bundle IDs
+    - Config syntax is valid (TOML array format)
+    
+    **Valid syntax:**
+    ```toml
+    [general]
+    excluded_apps = [
+        "com.apple.Terminal",  # Comma-separated
+        "com.googlecode.iterm2",
+    ]
+    ```
+  </Accordion>
+  
+  <Accordion title="Exclusion not working after app update">
+    **Sometimes apps change bundle IDs after updates.**
+    
+    **Solution:**
+    1. Get the new bundle ID:
+       ```bash
+       osascript -e 'id of app "AppName"'
+       ```
+    2. Update your config with the new ID
+    3. Reload: `neru config reload`
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start Minimal" icon="minimize">
+    Only exclude apps where Neru genuinely interferes with your workflow
+  </Card>
+  <Card title="Document Why" icon="comment">
+    Add comments in your config explaining why each app is excluded
+  </Card>
+  <Card title="Test After Changes" icon="flask">
+    Always test exclusions after modifying the config
+  </Card>
+  <Card title="Keep List Updated" icon="rotate">
+    Review and update exclusions as you install/remove apps
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Explore all configuration options
+  </Card>
+  <Card title="Screen Sharing" icon="video" href="/guides/screen-sharing">
+    Hide overlays during screen sharing
+  </Card>
+  <Card title="Hotkeys" icon="keyboard" href="/guides/hotkeys">
+    Configure global keyboard shortcuts
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/daemon-control">
+    Learn CLI commands for scripting
+  </Card>
+</CardGroup>

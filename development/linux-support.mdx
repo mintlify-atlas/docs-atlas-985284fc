@@ -1,0 +1,321 @@
+---
+title: "Linux Support"
+description: "Linux implementation status and contribution opportunities"
+---
+
+## Current Status
+
+Linux support is currently in the **foundation phase**. The architecture and interfaces are in place, but native implementations for accessibility, event capture, and overlays require community contribution.
+
+<Note>
+**Stub Implementations**
+
+All Linux-specific adapters currently return `CodeNotSupported`. These stubs serve as clear integration points for contributors to implement real functionality.
+</Note>
+
+## Implementation Status
+
+### Infrastructure Components
+
+| Component | Status | Priority | Difficulty |
+| :-------- | :----: | :------: | :--------: |
+| **Screen bounds / cursor** | 🔲 Stub | High | Medium |
+| **Global hotkeys** | 🔲 Stub | High | Medium |
+| **Keyboard event tap** | 🔲 Stub | High | Hard |
+| **Accessibility (AT-SPI)** | 🔲 Stub | High | Hard |
+| **UI overlays** | 🔲 Stub | High | Medium |
+| **App watcher** | 🔲 Stub | Medium | Medium |
+| **Dark mode detection** | 🔲 Stub | Low | Easy |
+| **Notifications / alerts** | 🔲 Stub | Low | Easy |
+| **Config / log directories** | ⚠️ Partial | Low | Easy |
+
+<Info>
+**Legend**
+
+- ✅ = Fully Implemented
+- ⚠️ = Partially Implemented
+- 🔲 = Stub (Needs Implementation)
+</Info>
+
+## Required Technologies
+
+### AT-SPI (Assistive Technology Service Provider Interface)
+
+AT-SPI is the Linux equivalent of macOS Accessibility APIs. It provides programmatic access to UI elements.
+
+**Key Capabilities Needed:**
+
+- Query accessible UI element trees
+- Get element properties (position, role, name)
+- Perform actions (click, focus)
+- Monitor application focus changes
+
+**Integration Points:**
+
+- `internal/core/infra/platform/linux/accessibility.go`
+- `internal/core/infra/accessibility/adapter_linux.go`
+
+**Resources:**
+
+- [AT-SPI Documentation](https://www.freedesktop.org/wiki/Accessibility/AT-SPI2/)
+- [PyATSPI Examples](https://github.com/GNOME/pyatspi2)
+
+### X11 / Wayland Event Capture
+
+Linux requires different approaches for X11 vs Wayland:
+
+#### X11 Approach
+
+- Use `XGrabKey` for global hotkeys
+- Use `XRecordExtension` or `XInput2` for event capture
+- Direct access to X server
+
+#### Wayland Approach
+
+- Compositor-specific protocols (more restrictive)
+- May require compositor cooperation (e.g., Sway IPC)
+- Security model prevents global key interception in some cases
+
+**Integration Points:**
+
+- `internal/core/infra/hotkeys/manager_linux.go`
+- `internal/core/infra/eventtap/eventtap_linux.go`
+
+**Resources:**
+
+- [Xlib Programming Manual](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html)
+- [Wayland Protocols](https://wayland.freedesktop.org/docs/html/)
+
+### Native Overlays
+
+Linux overlays require creating transparent, click-through windows:
+
+#### X11 Approach
+
+- Create X11 windows with `_NET_WM_WINDOW_TYPE_DOCK` or `_NET_WM_WINDOW_TYPE_UTILITY`
+- Use shape extension for transparency
+- Position above all other windows
+
+#### Wayland Approach
+
+- Use layer-shell protocol (compositor-dependent)
+- Create overlay surfaces
+
+**Integration Points:**
+
+- `internal/app/components/hints/overlay_linux.go`
+- `internal/app/components/grid/overlay_linux.go`
+- `internal/app/components/scroll/overlay_linux.go`
+
+**Resources:**
+
+- [Extended Window Manager Hints](https://specifications.freedesktop.org/wm-spec/wm-spec-latest.html)
+- [Layer Shell Protocol](https://github.com/swaywm/wlr-protocols/blob/master/unstable/wlr-layer-shell-unstable-v1.xml)
+
+## Contribution Opportunities
+
+### Quick Wins (Good First Issues)
+
+<CardGroup cols={2}>
+  <Card title="Dark Mode Detection" icon="moon">
+    **Difficulty**: Easy
+    
+    Read GTK theme settings or desktop environment config.
+    
+    **File**: `internal/core/infra/platform/linux/system.go`
+  </Card>
+  <Card title="Notifications" icon="bell">
+    **Difficulty**: Easy
+    
+    Use D-Bus to send desktop notifications.
+    
+    **File**: `internal/core/infra/platform/linux/system.go`
+  </Card>
+</CardGroup>
+
+### Medium Priority
+
+<CardGroup cols={2}>
+  <Card title="Screen Bounds & Cursor" icon="desktop">
+    **Difficulty**: Medium
+    
+    Use X11 or Wayland protocols to get screen dimensions and cursor position.
+    
+    **File**: `internal/core/infra/platform/linux/system.go`
+  </Card>
+  <Card title="Global Hotkeys" icon="keyboard">
+    **Difficulty**: Medium
+    
+    Implement using X11 `XGrabKey` or compositor-specific protocols.
+    
+    **File**: `internal/core/infra/hotkeys/manager_linux.go`
+  </Card>
+  <Card title="UI Overlays" icon="layer-group">
+    **Difficulty**: Medium
+    
+    Create transparent X11 windows or Wayland surfaces.
+    
+    **Files**: `internal/app/components/*/overlay_linux.go`
+  </Card>
+  <Card title="App Watcher" icon="eye">
+    **Difficulty**: Medium
+    
+    Monitor window focus changes via X11 events or Wayland protocols.
+    
+    **File**: `internal/core/infra/appwatcher/platform_linux.go`
+  </Card>
+</CardGroup>
+
+### High Priority (Core Functionality)
+
+<CardGroup cols={2}>
+  <Card title="Keyboard Event Tap" icon="keyboard">
+    **Difficulty**: Hard
+    
+    Global keyboard interception for navigation modes.
+    
+    **File**: `internal/core/infra/eventtap/eventtap_linux.go`
+  </Card>
+  <Card title="AT-SPI Accessibility" icon="universal-access">
+    **Difficulty**: Hard
+    
+    Full AT-SPI integration for Hints Mode.
+    
+    **File**: `internal/core/infra/platform/linux/accessibility.go`
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+### Setup Development Environment
+
+1. **Install Dependencies**:
+
+```bash
+# Ubuntu/Debian
+sudo apt install libx11-dev libxtst-dev libxcursor-dev at-spi2-core
+
+# Fedora
+sudo dnf install libX11-devel libXtst-devel libXcursor-devel at-spi2-core-devel
+
+# Arch
+sudo pacman -S libx11 libxtst libxcursor at-spi2-core
+```
+
+2. **Clone and Build**:
+
+```bash
+git clone https://github.com/y3owk1n/neru.git
+cd neru
+just build
+```
+
+3. **Pick a Component**:
+
+Choose a stub implementation from the [Implementation Status](#implementation-status) table.
+
+4. **Follow the Porting Guide**:
+
+Read the [Porting Guide](/development/porting-guide) for step-by-step instructions.
+
+### Implementation Workflow
+
+1. **Find the stub** in the appropriate file (e.g., `system_linux.go`)
+2. **Replace `CodeNotSupported`** with real implementation
+3. **Add tests** (unit and integration)
+4. **Run CI locally**:
+
+```bash
+just lint
+just vet
+just test
+just build
+```
+
+5. **Submit a PR** with focused changes
+
+## Architecture Notes
+
+### Build Tags
+
+All Linux-specific code uses the `//go:build linux` build tag:
+
+```go
+//go:build linux
+package linux
+
+import (
+    "github.com/y3owk1n/neru/internal/core/errors"
+)
+
+func (s *LinuxSystem) GetScreenBounds() (Rect, error) {
+    // TODO: Implement using X11/Wayland
+    return Rect{}, derrors.New(derrors.CodeNotSupported,
+        "GetScreenBounds not yet implemented on linux")
+}
+```
+
+### CGo Usage
+
+Linux implementations will likely require CGo for native library access:
+
+```go
+/*
+#cgo pkg-config: x11
+#include <X11/Xlib.h>
+*/
+import "C"
+
+func getDisplaySize() (int, int) {
+    display := C.XOpenDisplay(nil)
+    defer C.XCloseDisplay(display)
+    screen := C.XDefaultScreenOfDisplay(display)
+    return int(C.XWidthOfScreen(screen)), int(C.XHeightOfScreen(screen))
+}
+```
+
+## Testing on Linux
+
+Integration tests require a real Linux environment:
+
+```go
+//go:build integration && linux
+package linux
+
+import "testing"
+
+func TestGetScreenBounds_Integration(t *testing.T) {
+    if os.Getenv("DISPLAY") == "" {
+        t.Skip("No X11 display available")
+    }
+    // ... test implementation
+}
+```
+
+Run integration tests:
+
+```bash
+just test-integration
+```
+
+## Get Help
+
+<CardGroup cols={2}>
+  <Card title="Linux Support Discussion" icon="github" href="https://github.com/y3owk1n/neru/discussions/559">
+    Ask questions and share progress
+  </Card>
+  <Card title="Cross-Platform Issues" icon="tags" href="https://github.com/y3owk1n/neru/issues?q=is%3Aopen+is%3Aissue+label%3Across-platform">
+    Browse Linux-related tasks
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Porting Guide" icon="book" href="/development/porting-guide">
+    Step-by-step implementation instructions
+  </Card>
+  <Card title="Cross-Platform Architecture" icon="diagram-project" href="/development/cross-platform">
+    Understand the overall design
+  </Card>
+</CardGroup>

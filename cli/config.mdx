@@ -1,0 +1,551 @@
+---
+title: Configuration Management
+description: Reload and inspect Neru configuration
+icon: sliders
+---
+
+Manage Neru's configuration without restarting the daemon. Dump effective configuration or reload from disk.
+
+## Overview
+
+Configuration commands allow you to:
+
+- View the currently active configuration
+- Reload configuration from disk without restart
+- Inspect effective settings
+- Debug configuration issues
+
+<Note>
+  All configuration commands require a running daemon. Use `neru launch` to start the daemon first.
+</Note>
+
+---
+
+## neru config reload
+
+Reload the configuration from disk without restarting the daemon.
+
+```bash
+neru config reload
+```
+
+### Description
+
+Reloads the Neru configuration file from disk and applies changes immediately. This allows you to modify configuration and see results without restarting the daemon.
+
+### Requirements
+
+<Warning>
+  Requires daemon to be running.
+</Warning>
+
+### What Gets Reloaded
+
+The reload command reloads:
+
+- Navigation mode settings (hints, grid, recursive_grid, scroll)
+- Hotkey bindings
+- Visual appearance settings
+- Behavior settings
+- Feature toggles
+
+### What Doesn't Reload
+
+Some settings require daemon restart:
+
+- IPC socket path
+- Logging configuration
+- Platform-specific initialization
+
+### Workflow
+
+<Steps>
+  <Step title="Edit configuration">
+    Modify your config file:
+    ```bash
+    vim ~/.config/neru/config.toml
+    ```
+  </Step>
+  <Step title="Reload">
+    Apply changes without restart:
+    ```bash
+    neru config reload
+    ```
+  </Step>
+  <Step title="Test">
+    Test the new configuration:
+    ```bash
+    neru hints  # or other commands
+    ```
+  </Step>
+</Steps>
+
+### Examples
+
+<CodeGroup>
+```bash Reload config
+neru config reload
+```
+
+```bash Edit and reload
+# Edit config file
+vim ~/.config/neru/config.toml
+
+# Apply changes
+neru config reload
+
+# Test new settings
+neru hints
+```
+
+```bash Reload in script
+#!/bin/bash
+# Update config programmatically
+echo 'new_setting = "value"' >> ~/.config/neru/config.toml
+
+# Reload
+neru config reload
+
+# Verify
+neru config dump | grep new_setting
+```
+</CodeGroup>
+
+### Error Handling
+
+If the configuration file has errors:
+
+```bash
+# Reload will fail with error message
+neru config reload
+# Error: failed to parse config: ...
+
+# Check config syntax
+neru config dump
+
+# Fix errors in config file
+vim ~/.config/neru/config.toml
+
+# Try reload again
+neru config reload
+```
+
+---
+
+## neru config dump
+
+Display the currently active configuration.
+
+```bash
+neru config dump
+```
+
+### Description
+
+Prints the effective configuration as formatted JSON. This shows the actual configuration being used by the daemon, including all defaults.
+
+### Requirements
+
+<Warning>
+  Requires daemon to be running.
+</Warning>
+
+### Output Format
+
+The output is pretty-printed JSON with:
+
+- All configuration sections
+- Effective values (including defaults)
+- Nested structures preserved
+- Indented for readability
+
+### Use Cases
+
+- **Debug configuration** - See what settings are actually active
+- **Verify changes** - Confirm configuration reload worked
+- **Export configuration** - Save current config to file
+- **Inspect defaults** - See all default values
+- **Configuration audit** - Review all settings
+
+### Examples
+
+<CodeGroup>
+```bash Dump full config
+neru config dump
+```
+
+```bash Save to file
+neru config dump > neru-config.json
+```
+
+```bash Inspect specific section
+neru config dump | jq '.hint'
+```
+
+```bash Check hotkeys
+neru config dump | jq '.hotkeys'
+```
+
+```bash Find setting
+neru config dump | grep -A 5 "grid"
+```
+</CodeGroup>
+
+### Configuration Sections
+
+The dump includes all configuration sections:
+
+<AccordionGroup>
+  <Accordion title="Hint Mode Settings">
+    ```json
+    {
+      "hint": {
+        "enabled": true,
+        "label_style": { ... },
+        "filter_patterns": [ ... ],
+        ...
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Grid Mode Settings">
+    ```json
+    {
+      "grid": {
+        "enabled": true,
+        "dimensions": { ... },
+        "colors": { ... },
+        ...
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Recursive Grid Settings">
+    ```json
+    {
+      "recursive_grid": {
+        "enabled": true,
+        "grid_size": 2,
+        "key_bindings": { ... },
+        ...
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Scroll Mode Settings">
+    ```json
+    {
+      "scroll": {
+        "enabled": true,
+        "key_bindings": { ... },
+        "scroll_amount": { ... },
+        ...
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Hotkeys">
+    ```json
+    {
+      "hotkeys": {
+        "hints": ["Cmd+Shift+F"],
+        "grid": ["Cmd+Shift+G"],
+        ...
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Configuration Workflow
+
+### Development Workflow
+
+Iterative configuration development:
+
+```bash workflow.sh
+#!/bin/bash
+
+# 1. Start daemon
+neru launch
+
+# 2. Edit config
+vim ~/.config/neru/config.toml
+
+# 3. Reload
+neru config reload
+
+# 4. Test
+neru hints
+
+# 5. Inspect if issues
+neru config dump | less
+
+# 6. Repeat from step 2
+```
+
+### Backup Current Config
+
+```bash
+# Dump current config to file
+neru config dump > ~/.config/neru/backup-$(date +%Y%m%d).json
+```
+
+### Compare Configs
+
+```bash
+# Dump before changes
+neru config dump > before.json
+
+# Make changes and reload
+vim ~/.config/neru/config.toml
+neru config reload
+
+# Dump after changes
+neru config dump > after.json
+
+# Compare
+diff before.json after.json
+```
+
+### Validate Config Changes
+
+```bash validate-config.sh
+#!/bin/bash
+
+# Save current config
+neru config dump > /tmp/config-backup.json
+
+# Try reload
+if neru config reload; then
+    echo "✓ Config reload successful"
+    neru config dump > /tmp/config-new.json
+    
+    # Show what changed
+    diff /tmp/config-backup.json /tmp/config-new.json
+else
+    echo "✗ Config reload failed"
+    echo "Previous config was:"
+    cat /tmp/config-backup.json
+    exit 1
+fi
+```
+
+---
+
+## Troubleshooting
+
+### Configuration Not Loading
+
+<Steps>
+  <Step title="Check file exists">
+    ```bash
+    ls -l ~/.config/neru/config.toml
+    ```
+  </Step>
+  <Step title="Verify syntax">
+    ```bash
+    # If using TOML
+    # Check for syntax errors manually or use validator
+    ```
+  </Step>
+  <Step title="Try reload">
+    ```bash
+    neru config reload
+    # Check error message if fails
+    ```
+  </Step>
+  <Step title="Dump config">
+    ```bash
+    neru config dump
+    # Verify settings are correct
+    ```
+  </Step>
+</Steps>
+
+### Changes Not Taking Effect
+
+<AccordionGroup>
+  <Accordion title="Reload not called">
+    Ensure you ran `neru config reload` after editing:
+    ```bash
+    neru config reload
+    ```
+  </Accordion>
+  
+  <Accordion title="Wrong config file">
+    Verify you're editing the correct file:
+    ```bash
+    # Check which config is being used
+    neru config dump | head -20
+    ```
+  </Accordion>
+  
+  <Accordion title="Setting requires restart">
+    Some settings require daemon restart:
+    ```bash
+    pkill neru
+    neru launch
+    ```
+  </Accordion>
+  
+  <Accordion title="Invalid value">
+    Check for validation errors:
+    ```bash
+    neru config reload
+    # Read error message carefully
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Config Dump Fails
+
+```bash
+# Ensure daemon is running
+neru status
+
+# If not running, start it
+neru launch
+
+# Try dump again
+neru config dump
+```
+
+### Invalid Configuration
+
+```bash
+# Reload will show error
+neru config reload
+# Error: failed to parse config: line 42: invalid value
+
+# Fix the error
+vim ~/.config/neru/config.toml
+
+# Try again
+neru config reload
+```
+
+---
+
+## Configuration File Locations
+
+Neru looks for configuration files in these locations (in order):
+
+1. **Custom path** (via `--config` flag)
+   ```bash
+   neru launch --config /path/to/config.toml
+   ```
+
+2. **XDG config directory**
+   ```
+   ~/.config/neru/config.toml
+   ```
+
+3. **Home directory**
+   ```
+   ~/.neru.toml
+   ```
+
+4. **System config**
+   ```
+   /etc/neru/config.toml
+   ```
+
+### Check Active Config Path
+
+```bash
+# The config dump shows which file is loaded
+neru config dump | head -1
+```
+
+---
+
+## Advanced Usage
+
+### Watch and Auto-Reload
+
+Automatically reload on config changes:
+
+```bash watch-config.sh
+#!/bin/bash
+# Requires fswatch: brew install fswatch
+
+CONFIG_FILE="$HOME/.config/neru/config.toml"
+
+fswatch -o "$CONFIG_FILE" | while read; do
+    echo "Config changed, reloading..."
+    neru config reload
+    if [ $? -eq 0 ]; then
+        echo "✓ Reload successful"
+    else
+        echo "✗ Reload failed"
+    fi
+done
+```
+
+### Profile Switching
+
+Switch between different configuration profiles:
+
+```bash switch-profile.sh
+#!/bin/bash
+
+PROFILE=$1
+CONFIG_DIR="$HOME/.config/neru"
+
+if [ -z "$PROFILE" ]; then
+    echo "Usage: $0 <profile>"
+    echo "Available profiles:"
+    ls -1 "$CONFIG_DIR"/*.toml | xargs -n1 basename
+    exit 1
+fi
+
+# Backup current
+cp "$CONFIG_DIR/config.toml" "$CONFIG_DIR/config.toml.bak"
+
+# Switch profile
+cp "$CONFIG_DIR/$PROFILE.toml" "$CONFIG_DIR/config.toml"
+
+# Reload
+neru config reload
+
+echo "Switched to profile: $PROFILE"
+```
+
+### Extract Specific Section
+
+```bash
+# Extract hints configuration
+neru config dump | jq '.hint' > hint-config.json
+
+# Extract all hotkeys
+neru config dump | jq '.hotkeys' > hotkeys.json
+
+# Extract scroll key bindings
+neru config dump | jq '.scroll.key_bindings' > scroll-keys.json
+```
+
+---
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Daemon Control" icon="power-off" href="/cli/daemon-control">
+    Launch daemon with custom config
+  </Card>
+  <Card title="Configuration Guide" icon="book" href="/guides/configuration">
+    Full configuration reference
+  </Card>
+  <Card title="Customization" icon="palette" href="/guides/configuration">
+    Customize appearance and behavior
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting/common-issues">
+    Configuration troubleshooting
+  </Card>
+</CardGroup>

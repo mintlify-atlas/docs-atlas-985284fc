@@ -1,0 +1,366 @@
+---
+title: Installation
+description: Install Neru on macOS via Homebrew, Nix, or from source
+---
+
+<Note>
+  **macOS only:** Neru currently supports macOS 11.0 or later. Linux and Windows support is in progress.
+</Note>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Homebrew (Recommended)">
+    ### Install via Homebrew
+
+    The easiest way to install Neru on macOS.
+
+    ```bash
+    # Add the tap
+    brew tap y3owk1n/tap
+    
+    # Install Neru
+    brew install --cask y3owk1n/tap/neru
+    ```
+
+    ### Update
+
+    ```bash
+    brew upgrade --cask neru
+    ```
+
+    ### Uninstall
+
+    ```bash
+    brew uninstall --cask neru
+    ```
+  </Tab>
+
+  <Tab title="Nix">
+    ### Add Flake Input
+
+    Add Neru to your flake inputs:
+
+    ```nix
+    # flake.nix
+    {
+      inputs = {
+        # ... other inputs
+        neru.url = "github:y3owk1n/neru";
+        # ... other inputs
+      };
+    }
+    ```
+
+    ### Option 1: nix-darwin Module (System-Level)
+
+    Use the nix-darwin module for system-wide installation:
+
+    ```nix
+    # flake.nix
+    {
+      outputs = { self, nixpkgs, nix-darwin, neru, ... }: {
+        darwinConfigurations.your-hostname = nix-darwin.lib.darwinSystem {
+          modules = [
+            # Apply the Neru overlay
+            {
+              nixpkgs.overlays = [ neru.overlays.default ];
+            }
+
+            # Import the Neru module
+            neru.darwinModules.default
+
+            # Configure Neru
+            {
+              # Enable Neru
+              services.neru.enable = true;
+
+              # Optional: Inline configuration
+              services.neru.config = ''
+                [hotkeys]
+                "Cmd+Shift+Space" = "hints left_click"
+                "Cmd+Shift+G" = "grid left_click"
+
+                [general]
+                excluded_apps = ["com.apple.Terminal"]
+              '';
+            }
+          ];
+        };
+      };
+    }
+    ```
+
+    **Module Options:**
+    - `services.neru.enable` - Enable Neru (default: `false`)
+    - `services.neru.package` - Package to use (default: `pkgs.neru`)
+    - `services.neru.config` - Inline TOML configuration
+
+    The module automatically:
+    - Installs Neru system-wide
+    - Creates a launchd user agent
+    - Configures auto-start at login
+    - Installs shell completions
+
+    ### Option 2: home-manager Module (User-Level)
+
+    Use the home-manager module for user-specific installation:
+
+    ```nix
+    # flake.nix
+    {
+      outputs = { self, nixpkgs, home-manager, neru, ... }: {
+        homeConfigurations.your-username = home-manager.lib.homeManagerConfiguration {
+          pkgs = nixpkgs.legacyPackages.aarch64-darwin;
+
+          modules = [
+            # Apply the Neru overlay
+            {
+              nixpkgs.overlays = [ neru.overlays.default ];
+            }
+
+            # Import the Neru module
+            neru.homeManagerModules.default
+
+            # Configure Neru
+            {
+              services.neru.enable = true;
+
+              # Option A: Inline configuration
+              services.neru.config = ''
+                [hotkeys]
+                "Cmd+Shift+Space" = "hints left_click"
+              '';
+
+              # Option B: Use existing config file
+              # services.neru.configFile = ./path/to/config.toml;
+            }
+          ];
+        };
+      };
+    }
+    ```
+
+    **Module Options:**
+    - `services.neru.enable` - Enable Neru
+    - `services.neru.package` - Package to use
+    - `services.neru.config` - Inline TOML configuration
+    - `services.neru.configFile` - Path to existing config file (takes precedence)
+    - `services.neru.launchd.enable` - Enable launchd agent (default: `true`)
+    - `services.neru.launchd.keepAlive` - Keep service alive (default: `true`)
+
+    ### Update
+
+    ```bash
+    nix flake update neru
+    # Then rebuild your system/home configuration
+    ```
+  </Tab>
+
+  <Tab title="From Source">
+    ### Requirements
+
+    - Go 1.26+
+    - Xcode Command Line Tools
+    - Just command runner
+
+    ### Build CLI
+
+    ```bash
+    git clone https://github.com/y3owk1n/neru.git
+    cd neru
+
+    # Build CLI binary
+    just release
+    mv ./bin/neru /usr/local/bin/neru
+    ```
+
+    ### Build App Bundle
+
+    ```bash
+    # Build macOS application
+    just bundle
+    mv ./build/Neru.app /Applications/Neru.app
+    ```
+
+    <Info>
+      See the [Development Guide](https://github.com/y3owk1n/neru/blob/main/docs/DEVELOPMENT.md) for detailed build options.
+    </Info>
+  </Tab>
+</Tabs>
+
+## Post-Installation Setup
+
+<Steps>
+  <Step title="Grant Accessibility Permissions">
+    Neru requires accessibility permissions to control the mouse and keyboard.
+
+    1. Open **System Settings**
+    2. Navigate to **Privacy & Security → Accessibility**
+    3. Click the **+** button to add Neru
+    4. Enable the checkbox next to **Neru**
+
+    <Warning>
+      Without accessibility permissions, Neru cannot function. You'll see a permission prompt on first launch.
+    </Warning>
+  </Step>
+
+  <Step title="Launch Neru">
+    Start Neru using one of these methods:
+
+    <CodeGroup>
+    ```bash App Bundle
+    open -a Neru
+    ```
+
+    ```bash CLI
+    neru launch
+    ```
+
+    ```bash Auto-start with launchd
+    neru services install
+    ```
+    </CodeGroup>
+
+    <Note>
+      If you installed via nix-darwin or home-manager, the launchd service is already configured.
+    </Note>
+  </Step>
+
+  <Step title="Verify Installation">
+    Check that Neru is running:
+
+    ```bash
+    neru --version
+    neru status  # Should show "running"
+    ```
+  </Step>
+
+  <Step title="Configure (Optional)">
+    Neru works out of the box with sensible defaults. To customize:
+
+    1. Copy the default config:
+
+    ```bash
+    mkdir -p ~/.config/neru
+    # Download default config from the repo
+    curl -o ~/.config/neru/config.toml \
+      https://raw.githubusercontent.com/y3owk1n/neru/main/configs/default-config.toml
+    ```
+
+    2. Edit `~/.config/neru/config.toml` to customize hotkeys, colors, and behavior
+
+    3. Reload config:
+
+    ```bash
+    neru config reload
+    ```
+
+    <Tip>
+      See the [Configuration Guide](/guides/configuration) for all available options.
+    </Tip>
+  </Step>
+</Steps>
+
+## Shell Completions
+
+Neru provides shell completions for bash, zsh, and fish.
+
+<CodeGroup>
+```bash Bash
+neru completion bash > /usr/local/etc/bash_completion.d/neru
+```
+
+```bash Zsh
+neru completion zsh > "${fpath[1]}/_neru"
+```
+
+```bash Fish
+neru completion fish > ~/.config/fish/completions/neru.fish
+```
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Permission dialog keeps appearing">
+    This is normal on first launch. Click **OK** and grant accessibility permissions in System Settings → Privacy & Security → Accessibility.
+  </Accordion>
+
+  <Accordion title="Command not found: neru">
+    If using the CLI build, ensure the binary is in your PATH:
+
+    ```bash
+    # Add to ~/.zshrc or ~/.bashrc
+    export PATH="/usr/local/bin:$PATH"
+    ```
+
+    Make the binary executable:
+
+    ```bash
+    chmod +x /usr/local/bin/neru
+    ```
+  </Accordion>
+
+  <Accordion title="App won't open (macOS quarantine)">
+    macOS may quarantine apps from unidentified developers:
+
+    ```bash
+    xattr -cr /Applications/Neru.app
+    ```
+
+    Then try opening again.
+  </Accordion>
+
+  <Accordion title="Neru not responding to hotkeys">
+    1. Check that Neru is running: `neru status`
+    2. Verify accessibility permissions are granted
+    3. Check hotkey configuration in `~/.config/neru/config.toml`
+    4. Reload config: `neru config reload`
+  </Accordion>
+</AccordionGroup>
+
+## Uninstallation
+
+<Tabs>
+  <Tab title="Homebrew">
+    ```bash
+    brew uninstall --cask neru
+    ```
+  </Tab>
+
+  <Tab title="Nix">
+    Remove the module from your nix-darwin or home-manager configuration and rebuild.
+  </Tab>
+
+  <Tab title="Manual">
+    ```bash
+    # Stop and remove launchd service (if installed)
+    neru services uninstall
+
+    # Remove app bundle
+    rm -rf /Applications/Neru.app
+
+    # Remove CLI
+    rm /usr/local/bin/neru
+
+    # Remove configuration
+    rm -rf ~/.config/neru
+    rm -rf ~/Library/Application\ Support/neru
+
+    # Remove logs
+    rm -rf ~/Library/Logs/neru
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Try your first navigation in 5 minutes
+  </Card>
+  <Card title="Configuration Guide" icon="gear" href="/guides/configuration">
+    Customize hotkeys, colors, and behavior
+  </Card>
+</CardGroup>

@@ -1,0 +1,199 @@
+---
+title: 'Contributing Overview'
+description: 'Learn how to contribute to Neru - from reporting bugs to submitting pull requests'
+icon: 'users'
+---
+
+Thanks for your interest in contributing! Neru is a small project with an approachable codebase, and we welcome contributions of all kinds — code, docs, bug reports, config examples, or ideas.
+
+## Code of Conduct
+
+This project follows our Code of Conduct. By participating you agree to uphold it. Please report unacceptable behavior via [GitHub Issues](https://github.com/y3owk1n/neru/issues) or by contacting [@y3owk1n](https://github.com/y3owk1n) directly.
+
+**Our standards:**
+
+- Being empathetic and kind
+- Respecting differing opinions, viewpoints, and experiences
+- Giving and gracefully accepting constructive feedback
+- Taking responsibility for mistakes and learning from experience
+- Focusing on what is best for the overall community
+
+## Getting Started
+
+<Steps>
+  <Step title="Search existing issues">
+    Check if someone is already working on the same thing or if there's a related discussion at [GitHub Issues](https://github.com/y3owk1n/neru/issues).
+  </Step>
+  
+  <Step title="Open an issue first">
+    For non-trivial changes, open an issue to avoid wasted effort and align on approach before writing code.
+  </Step>
+  
+  <Step title="Keep PRs focused">
+    Small, focused PRs are preferred over large, sweeping changes.
+  </Step>
+</Steps>
+
+## Development Workflow
+
+<Steps>
+  <Step title="Fork and clone the repository">
+    ```bash
+    git clone https://github.com/your-username/neru.git
+    cd neru
+    ```
+  </Step>
+  
+  <Step title="Create a feature branch">
+    ```bash
+    git checkout -b feat/my-feature
+    ```
+  </Step>
+  
+  <Step title="Make your changes">
+    Follow the [Coding Standards](/development/coding-standards) and add tests for any new or changed functionality.
+  </Step>
+  
+  <Step title="Run the pre-commit checklist">
+    ```bash
+    just fmt            # Format code
+    just lint           # Run linters
+    just test           # Run unit tests
+    just build          # Verify build
+    ```
+  </Step>
+  
+  <Step title="Commit using conventional commits">
+    See [Commit Messages](#commit-messages) below.
+  </Step>
+  
+  <Step title="Push and open a pull request">
+    Include a clear description of what changed and why.
+  </Step>
+</Steps>
+
+## Commit Messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) to power automated releases via [Release Please](https://github.com/googleapis/release-please).
+
+### Format
+
+```
+<type>(<optional scope>): <subject>
+<optional body>
+<optional footer>
+```
+
+### Types
+
+| Type       | When to use                            |
+| ---------- | -------------------------------------- |
+| `feat`     | New feature                            |
+| `fix`      | Bug fix                                |
+| `docs`     | Documentation only                     |
+| `style`    | Formatting, no logic change            |
+| `refactor` | Code restructuring, no behavior change |
+| `perf`     | Performance improvement                |
+| `test`     | Adding or updating tests               |
+| `chore`    | Build, CI, dependencies, tooling       |
+
+### Examples
+
+```bash
+feat(grid): add recursive subdivision mode
+fix(hints): correct overlay positioning on multi-monitor setups
+docs: update configuration reference for scroll mode
+```
+
+## Pull Requests
+
+<CardGroup cols={2}>
+  <Card title="Title Format" icon="tag">
+    Follow conventional commit format (e.g. `feat(hints): add multi-monitor support`)
+  </Card>
+  
+  <Card title="Description" icon="file-lines">
+    Explain _what_ changed and _why_. Include screenshots or recordings for UI changes.
+  </Card>
+  
+  <Card title="Keep Focused" icon="bullseye">
+    One logical change per PR. Link related issues (e.g. `Closes #123`).
+  </Card>
+  
+  <Card title="CI Checks" icon="check-circle">
+    All CI checks (lint, test, build) must pass before merge.
+  </Card>
+</CardGroup>
+
+A maintainer will review your PR. Be open to feedback and iterate.
+
+## Good First Contributions
+
+Not sure where to start? These are great entry points:
+
+- **Bug fixes** — check [open issues](https://github.com/y3owk1n/neru/issues)
+- **Documentation improvements** or typo fixes
+- **Config examples** for common setups
+- **Demo videos** or GIFs
+- **Performance improvements**
+- **Additional test coverage**
+
+## Reporting Bugs
+
+Open a [GitHub Issue](https://github.com/y3owk1n/neru/issues/new) with:
+
+1. **macOS version** and **Neru version** (`neru version`)
+2. **Steps to reproduce** — minimal and specific
+3. **Expected vs actual behavior**
+4. **Logs** — run with `log_level = "debug"` and attach relevant lines from `~/Library/Logs/neru/app.log`
+5. **Screenshots or recordings** if the issue is visual
+
+See also: [Troubleshooting Guide](/troubleshooting/common-issues).
+
+## Feature Requests
+
+Open a [GitHub Issue](https://github.com/y3owk1n/neru/issues/new) or start a [Discussion](https://github.com/y3owk1n/neru/discussions) describing:
+
+- **What** you'd like to see
+- **Why** it would be useful (your use case)
+- **How** you envision it working (optional but helpful)
+
+## Cross-Platform Contributions
+
+Neru is designed as a cross-platform tool with a strong emphasis on architectural separation. Before contributing code, especially for Linux or Windows support, please review the [Architecture](/development/architecture).
+
+### Key Architectural Rules
+
+1. **Platform Isolation**: OS-specific code must be strictly isolated. Non-darwin code must never import darwin-specific packages.
+2. **Hexagonal Architecture**: We use the Ports and Adapters pattern. Define interfaces (Ports) in `internal/core/ports` and implement them in `internal/core/infra`.
+3. **Build Tags**: Use Go build tags (e.g., `//go:build linux`) for OS-specific files.
+
+### Contributing to New Platforms
+
+If you are working on Linux or Windows support:
+
+- Check the current [Platform Status](/development/architecture#platform-status)
+- Start by replacing `CodeNotSupported` stubs in `internal/core/infra/platform/<os>/`
+- Follow the patterns established in the macOS implementation where applicable
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand Neru's hexagonal architecture and domain concepts
+  </Card>
+  
+  <Card title="Building" icon="hammer" href="/development/building">
+    Set up your development environment and build Neru
+  </Card>
+  
+  <Card title="Coding Standards" icon="code" href="/development/coding-standards">
+    Follow Go and Objective-C coding conventions
+  </Card>
+  
+  <Card title="GitHub Issues" icon="github" href="https://github.com/y3owk1n/neru/issues">
+    Browse open issues and discussions
+  </Card>
+</CardGroup>
+
+Thank you for helping make Neru better!

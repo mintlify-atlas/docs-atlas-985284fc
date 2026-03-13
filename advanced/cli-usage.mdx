@@ -1,0 +1,464 @@
+---
+title: "CLI Reference"
+description: "Complete command-line interface reference for Neru"
+---
+
+## Overview
+
+The Neru CLI provides comprehensive control over the daemon through a robust command-line interface. All commands communicate with the daemon via IPC (Inter-Process Communication) using Unix domain sockets, enabling fast, reliable communication and proper error handling.
+
+<Card title="Key Features" icon="bolt">
+  - Unix domain socket IPC for reliable communication
+  - Multiple concurrent CLI commands supported
+  - Structured error codes for scripting
+  - Configurable timeouts
+  - Command chaining and automation support
+</Card>
+
+## Command Categories
+
+Neru commands are organized into several categories:
+
+<CardGroup cols={2}>
+  <Card title="Daemon Control" icon="power-off">
+    Start, stop, and manage the Neru daemon
+  </Card>
+  <Card title="Navigation Modes" icon="location-crosshairs">
+    Hints, grid, recursive-grid, and scroll modes
+  </Card>
+  <Card title="Actions" icon="hand-pointer">
+    Immediate mouse actions and movements
+  </Card>
+  <Card title="Configuration" icon="gear">
+    Manage and reload configuration
+  </Card>
+</CardGroup>
+
+## Daemon Control
+
+### Launch
+
+Start the Neru daemon:
+
+```bash
+neru launch
+```
+
+With custom config:
+
+```bash
+neru launch --config /path/to/config.toml
+neru launch -c ./configs/author-config.toml
+```
+
+**Flags:**
+- `--config, -c` - Path to custom configuration file
+- `--timeout` - IPC timeout in seconds (default: 5)
+
+### Start/Stop/Idle
+
+```bash
+neru start    # Resume paused daemon
+neru stop     # Pause daemon (keeps running)
+neru idle     # Cancel active mode
+```
+
+<Note>
+  Use `stop` for temporary disable, `idle` to cancel the current navigation mode.
+</Note>
+
+### Status
+
+Check daemon status and current mode:
+
+```bash
+neru status
+```
+
+**Output example:**
+```
+Neru Status:
+  Status: running
+  Mode: idle
+  Config: /Users/username/.config/neru/config.toml
+```
+
+**Status values:** `running`, `stopped`  
+**Mode values:** `idle`, `hints`, `grid`, `recursive_grid`, `scroll`
+
+## Navigation Modes
+
+### Hints Mode
+
+Show clickable hints on UI elements:
+
+```bash
+neru hints
+```
+
+With immediate action:
+
+```bash
+neru hints --action left_click
+neru hints --action right_click
+neru hints -a middle_click
+```
+
+Source: [internal/cli/hints.go:4](file:///home/daytona/workspace/source/internal/cli/hints.go#L4)
+
+### Grid Mode
+
+Show coordinate grid:
+
+```bash
+neru grid
+```
+
+With immediate action:
+
+```bash
+neru grid --action left_click
+neru grid -a right_click
+```
+
+### Recursive Grid Mode
+
+Recursive cell-based navigation:
+
+```bash
+neru recursive_grid
+neru recursive_grid --action left_click
+```
+
+### Scroll Mode
+
+Vim-style scrolling:
+
+```bash
+neru scroll
+```
+
+### Action Flag Behavior
+
+The `--action` flag allows commands to execute an action immediately upon selection:
+
+<CodeGroup>
+```bash Hints (Recommended)
+neru hints --action right_click
+# After typing hint label (e.g., "AA"), right-clicks automatically
+```
+
+```bash Grid
+neru grid --action left_click
+# Clicks after final grid selection
+```
+
+```bash Recursive Grid
+neru recursive_grid --action left_click
+# Clicks after reaching final depth
+```
+</CodeGroup>
+
+<Tip>
+  The `--action` flag is most useful for hints mode. For other modes, consider using `auto_exit_actions` in your config file instead.
+</Tip>
+
+## Action Commands
+
+Perform immediate actions at the current cursor position:
+
+### Click Actions
+
+```bash
+neru action left_click     # Left click
+neru action right_click    # Right click
+neru action middle_click   # Middle click
+neru action mouse_down     # Hold mouse button
+neru action mouse_up       # Release mouse button
+```
+
+Source: [internal/cli/action.go:26-63](file:///home/daytona/workspace/source/internal/cli/action.go#L26-L63)
+
+### Mouse Movement
+
+**Absolute positioning:**
+
+```bash
+neru action move_mouse --x 500 --y 300
+```
+
+**Center of screen:**
+
+```bash
+neru action move_mouse --center
+```
+
+**Center with offset:**
+
+```bash
+neru action move_mouse --center --x 50 --y -30
+neru action move_mouse --center --x 100  # y defaults to 0
+```
+
+**Relative movement:**
+
+```bash
+neru action move_mouse_relative --dx 10 --dy -5
+```
+
+**Flags:**
+- `--x` - X coordinate (pixels) or horizontal offset with `--center`
+- `--y` - Y coordinate (pixels) or vertical offset with `--center`
+- `--center` - Move to center of active screen
+- `--dx` - Delta X for relative movement
+- `--dy` - Delta Y for relative movement
+
+Source: [internal/cli/root.go:150-233](file:///home/daytona/workspace/source/internal/cli/root.go#L150-L233)
+
+## Configuration Management
+
+### Dump Config
+
+Display the currently loaded configuration:
+
+```bash
+neru config dump
+```
+
+Outputs configuration as formatted JSON.
+
+### Reload Config
+
+Reload configuration without restarting:
+
+```bash
+neru config reload
+```
+
+Source: [internal/cli/config.go:67-77](file:///home/daytona/workspace/source/internal/cli/config.go#L67-L77)
+
+## Service Management
+
+### macOS (launchd)
+
+```bash
+neru services install    # Install and load launchd service
+neru services status     # Check service status
+```
+
+Installs to `~/Library/LaunchAgents` for automatic startup on login.
+
+<Note>
+  If using Nix or Homebrew, use their respective service managers instead.
+</Note>
+
+## Screen Sharing
+
+Toggle overlay visibility during screen sharing:
+
+```bash
+neru toggle-screen-share
+```
+
+**Behavior:**
+- When hidden, overlay won't appear in shared screens but remains visible locally
+- State resets to visible on restart
+- Also accessible via system tray menu
+
+<Warning>
+  Effectiveness varies by macOS version and screen sharing application. Always test with your specific setup. Works reliably on macOS 14 and earlier.
+</Warning>
+
+## Shell Integration
+
+### Health Check
+
+Verify component health:
+
+```bash
+neru doctor
+```
+
+### Completions
+
+Generate shell completions:
+
+<CodeGroup>
+```bash Bash
+neru completion bash > /usr/local/etc/bash_completion.d/neru
+```
+
+```zsh Zsh
+neru completion zsh > "${fpath[1]}/_neru"
+```
+
+```fish Fish
+neru completion fish > ~/.config/fish/completions/neru.fish
+```
+</CodeGroup>
+
+## Global Flags
+
+Available for all commands:
+
+```bash
+--config, -c    Path to config file
+--timeout       IPC timeout in seconds (default: 5)
+--version       Show version information
+--help, -h      Show help
+```
+
+Source: [internal/cli/root.go:75-77](file:///home/daytona/workspace/source/internal/cli/root.go#L75-L77)
+
+## IPC Communication
+
+### Protocol
+
+The CLI communicates with the daemon using Unix domain sockets with JSON messages.
+
+**Socket location:** `/var/folders/.../T/neru.sock` (typically in OS temp directory)
+
+**Request format:**
+```json
+{
+  "version": "1.0.0",
+  "action": "hints",
+  "params": {},
+  "args": []
+}
+```
+
+**Response format:**
+```json
+{
+  "version": "1.0.0",
+  "success": true,
+  "message": "OK",
+  "code": "OK",
+  "data": {}
+}
+```
+
+Source: [internal/core/infra/ipc/ipc.go:55-70](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L55-L70)
+
+### Error Codes
+
+Structured error codes for scripting:
+
+| Code | Description |
+|------|-------------|
+| `OK` | Success |
+| `ERR_UNKNOWN_COMMAND` | Invalid command |
+| `ERR_NOT_RUNNING` | Daemon not running |
+| `ERR_ALREADY_RUNNING` | Daemon already running |
+| `ERR_MODE_DISABLED` | Mode disabled in config |
+| `ERR_INVALID_INPUT` | Invalid input parameters |
+| `ERR_ACTION_FAILED` | Action execution failed |
+
+Source: [internal/core/infra/ipc/ipc.go:45-53](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L45-L53)
+
+### Timeouts
+
+```bash
+# Default timeout (5 seconds)
+neru status
+
+# Custom timeout
+neru --timeout 10 status
+```
+
+**Timeout constants:**
+- Default timeout: 5 seconds
+- Connection timeout: 2 seconds
+- Ping timeout: 500ms
+- Connection read timeout: 30 seconds
+
+Source: [internal/core/infra/ipc/ipc.go:24-42](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L24-L42)
+
+## Common Workflows
+
+### Quick Navigation
+
+```bash
+# Start daemon
+neru launch
+
+# Use hints for clicking
+neru hints
+# Type hint label to click
+
+# Right-click via hints
+neru hints --action right_click
+
+# Use grid for precise positioning
+neru grid
+```
+
+### Status Monitoring
+
+```bash
+# Check if running
+neru status &>/dev/null && echo "Running" || echo "Not running"
+
+# Get current mode
+neru status | grep "Mode:"
+```
+
+### Configuration Updates
+
+```bash
+# Edit config
+vim ~/.config/neru/config.toml
+
+# Reload without restart
+neru config reload
+
+# Verify changes
+neru config dump
+```
+
+## Troubleshooting
+
+### Command Hangs
+
+```bash
+# Force quit daemon
+pkill -9 neru
+
+# Restart
+neru launch
+```
+
+### Socket Permission Errors
+
+```bash
+# Remove stale socket
+rm -f /var/folders/*/*/T/neru.sock
+
+# Restart daemon
+neru launch
+```
+
+### Commands Not Working
+
+```bash
+# Verify daemon is running
+neru status
+
+# If not running, launch it
+neru launch
+
+# Check logs
+tail -f ~/Library/Logs/neru/app.log
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Scripting" icon="code" href="/advanced/scripting">
+    Learn how to automate Neru with shell scripts
+  </Card>
+  <Card title="IPC Automation" icon="network-wired" href="/advanced/ipc-automation">
+    Programmatic control via IPC protocol
+  </Card>
+</CardGroup>

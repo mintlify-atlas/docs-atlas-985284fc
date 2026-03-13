@@ -1,0 +1,356 @@
+---
+title: Hotkeys
+description: Configure global keyboard shortcuts to trigger Neru navigation modes
+---
+
+Global hotkeys allow you to trigger Neru navigation modes from anywhere without using the CLI.
+
+## Why Configure Hotkeys?
+
+<CardGroup cols={2}>
+  <Card title="Instant Activation" icon="bolt">
+    Activate navigation modes without opening a terminal
+  </Card>
+  <Card title="Customizable" icon="sliders">
+    Choose key combinations that match your workflow
+  </Card>
+  <Card title="Shell Commands" icon="terminal">
+    Execute any shell command directly from keyboard
+  </Card>
+  <Card title="Ergonomic" icon="hand">
+    Pick combinations comfortable for your keyboard layout
+  </Card>
+</CardGroup>
+
+## Default Hotkeys
+
+Neru ships with these default hotkeys:
+
+| Hotkey | Action | Description |
+|--------|--------|-------------|
+| `Cmd+Shift+Space` | `hints` | Show clickable hints |
+| `Cmd+Shift+G` | `grid` | Show coordinate grid |
+| `Cmd+Shift+C` | `recursive_grid` | Recursive grid navigation |
+| `Cmd+Shift+S` | `scroll` | Vim-style scrolling |
+
+## Hotkey Syntax
+
+### Format
+
+```toml
+[hotkeys]
+"Modifier1+Modifier2+Key" = "action"
+```
+
+### Modifiers
+
+| Modifier | macOS | Linux/Windows |
+|----------|-------|---------------|
+| `Cmd` | Command ⌘ | Windows key |
+| `Ctrl` | Control ⌃ | Control |
+| `Alt` | Option ⌥ | Alt |
+| `Shift` | Shift ⇧ | Shift |
+
+<Note>
+  Modifiers are case-insensitive: `Cmd`, `cmd`, and `CMD` all work.
+</Note>
+
+### Actions
+
+Hotkeys can trigger three types of actions:
+
+<Tabs>
+  <Tab title="Neru Commands">
+    ```toml
+    [hotkeys]
+    "Cmd+Shift+Space" = "hints"
+    "Cmd+Shift+G" = "grid"
+    "Cmd+Shift+C" = "recursive_grid"
+    "Cmd+Shift+S" = "scroll"
+    ```
+  </Tab>
+  
+  <Tab title="Commands with Actions">
+    ```toml
+    [hotkeys]
+    "Cmd+Shift+Space" = "hints --action left_click"
+    "Cmd+Shift+G" = "grid --action left_click"
+    "Cmd+Shift+R" = "hints --action right_click"
+    ```
+  </Tab>
+  
+  <Tab title="Shell Commands">
+    ```toml
+    [hotkeys]
+    # Open Terminal
+    "Cmd+Alt+T" = "exec open -a Terminal"
+    
+    # Open Visual Studio Code
+    "Cmd+Alt+C" = "exec open -a 'Visual Studio Code'"
+    
+    # Run custom script
+    "Cmd+Alt+S" = "exec ~/scripts/screenshot.sh"
+    
+    # Show notification (macOS)
+    "Cmd+Alt+N" = "exec osascript -e 'display notification \"Hello!\" with title \"Neru\"'"
+    ```
+  </Tab>
+</Tabs>
+
+## Important Behavior
+
+<Warning>
+  Defining **any** custom hotkey **replaces ALL defaults**. You must explicitly define every hotkey you want.
+</Warning>
+
+If you define this:
+
+```toml
+[hotkeys]
+"Cmd+Shift+Space" = "hints"
+```
+
+Then these default hotkeys will **no longer work**:
+- `Cmd+Shift+G` → grid
+- `Cmd+Shift+C` → recursive_grid  
+- `Cmd+Shift+S` → scroll
+
+To keep all modes accessible, define all the hotkeys you need:
+
+```toml
+[hotkeys]
+"Cmd+Shift+Space" = "hints"
+"Cmd+Shift+G" = "grid"
+"Cmd+Shift+C" = "recursive_grid"
+"Cmd+Shift+S" = "scroll"
+```
+
+## Configuration Examples
+
+<CodeGroup>
+```toml Basic
+[hotkeys]
+"Cmd+Shift+Space" = "hints"
+```
+
+```toml With Auto-click
+[hotkeys]
+"Cmd+Shift+Space" = "hints --action left_click"
+"Cmd+Shift+G" = "grid --action left_click"
+"Cmd+Shift+R" = "hints --action right_click"
+"Cmd+Shift+S" = "scroll"
+```
+
+```toml Vim-style
+[hotkeys]
+"Ctrl+F" = "hints"
+"Ctrl+G" = "grid"
+"Ctrl+C" = "recursive_grid"
+```
+
+```toml With Shell Commands
+[hotkeys]
+# Navigation modes
+"Cmd+Shift+Space" = "hints"
+"Cmd+Shift+G" = "grid"
+
+# Open apps
+"Cmd+Alt+T" = "exec open -a Terminal"
+"Cmd+Alt+C" = "exec open -a 'Visual Studio Code'"
+
+# Run scripts
+"Cmd+Alt+S" = "exec ~/scripts/screenshot.sh"
+```
+
+```toml Alternative Modifiers
+[hotkeys]
+"Alt+Space" = "hints"
+"Alt+G" = "grid"
+"Alt+C" = "recursive_grid"
+"Alt+S" = "scroll"
+```
+</CodeGroup>
+
+## Shell Command Examples
+
+### Open Applications
+
+<CodeGroup>
+```toml macOS
+[hotkeys]
+"Cmd+Alt+T" = "exec open -a Terminal"
+"Cmd+Alt+C" = "exec open -a 'Visual Studio Code'"
+"Cmd+Alt+B" = "exec open -a 'Google Chrome'"
+"Cmd+Alt+F" = "exec open -a Finder"
+```
+
+```toml Linux
+[hotkeys]
+"Cmd+Alt+T" = "exec gnome-terminal"
+"Cmd+Alt+C" = "exec code"
+"Cmd+Alt+B" = "exec google-chrome"
+"Cmd+Alt+F" = "exec nautilus"
+```
+</CodeGroup>
+
+### Run Scripts
+
+```toml
+[hotkeys]
+# Screenshot script
+"Cmd+Alt+S" = "exec ~/scripts/screenshot.sh"
+
+# Toggle dark mode (macOS)
+"Cmd+Alt+D" = "exec osascript -e 'tell app \"System Events\" to tell appearance preferences to set dark mode to not dark mode'"
+
+# Lock screen (macOS)
+"Cmd+Alt+L" = "exec /System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend"
+```
+
+### Show Notifications
+
+```toml
+[hotkeys]
+# macOS notification
+"Cmd+Alt+N" = "exec osascript -e 'display notification \"Task completed!\" with title \"Neru\"'"
+
+# Linux notification (notify-send)
+"Cmd+Alt+N" = "exec notify-send 'Neru' 'Task completed!'"
+```
+
+## Alternative: External Hotkey Manager
+
+For more complex hotkey setups, consider using external hotkey managers:
+
+<Tabs>
+  <Tab title="skhd (macOS)">
+    [skhd](https://github.com/koekeishiya/skhd) is a simple hotkey daemon for macOS.
+    
+    ```bash
+    # ~/.config/skhd/skhdrc
+    ctrl - f : neru hints
+    ctrl - g : neru grid
+    ctrl - r : neru hints --action right_click
+    ctrl - s : neru scroll
+    
+    # With modifiers
+    cmd + ctrl - space : neru hints --action left_click
+    cmd + ctrl - g : neru grid --action left_click
+    ```
+  </Tab>
+  
+  <Tab title="Karabiner (macOS)">
+    [Karabiner-Elements](https://karabiner-elements.pqrs.org/) provides advanced key remapping.
+    
+    Configure complex modifications in `~/.config/karabiner/karabiner.json`:
+    
+    ```json
+    {
+      "description": "Neru hotkeys",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "spacebar",
+            "modifiers": {"mandatory": ["command", "shift"]}
+          },
+          "to": [{"shell_command": "neru hints"}]
+        }
+      ]
+    }
+    ```
+  </Tab>
+  
+  <Tab title="xbindkeys (Linux)">
+    [xbindkeys](https://www.nongnu.org/xbindkeys/) is a hotkey daemon for X11.
+    
+    ```bash
+    # ~/.xbindkeysrc
+    "neru hints"
+      Control + f
+    
+    "neru grid"
+      Control + g
+    
+    "neru hints --action right_click"
+      Control + r
+    ```
+  </Tab>
+</Tabs>
+
+## Testing Hotkeys
+
+After configuring hotkeys:
+
+1. Reload configuration:
+   ```bash
+   neru config reload
+   ```
+
+2. Test each hotkey by pressing the key combination
+
+3. Check logs if a hotkey doesn't work:
+   ```bash
+   tail -f ~/Library/Logs/neru/app.log
+   ```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Hotkey not working">
+    **Possible causes:**
+    - Another app is using the same hotkey
+    - Neru daemon not running (`neru status`)
+    - Invalid hotkey syntax in config
+    - Config not reloaded after changes
+    
+    **Solutions:**
+    - Choose a different key combination
+    - Restart daemon: `neru launch`
+    - Check syntax: `neru config dump`
+    - Reload config: `neru config reload`
+  </Accordion>
+  
+  <Accordion title="Shell command not executing">
+    **Check:**
+    - Command works when run directly in terminal
+    - Quotes are properly escaped in TOML
+    - Full path to executables if not in `$PATH`
+    
+    **Example with proper escaping:**
+    ```toml
+    [hotkeys]
+    "Cmd+Alt+N" = "exec osascript -e 'display notification \"Hello!\" with title \"Neru\"'"
+    ```
+  </Accordion>
+  
+  <Accordion title="All default hotkeys stopped working">
+    This is expected behavior. When you define custom hotkeys, all defaults are replaced.
+    
+    **Solution:** Explicitly define all hotkeys you need:
+    ```toml
+    [hotkeys]
+    "Cmd+Shift+Space" = "hints"
+    "Cmd+Shift+G" = "grid"
+    "Cmd+Shift+C" = "recursive_grid"
+    "Cmd+Shift+S" = "scroll"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Explore all configuration options
+  </Card>
+  <Card title="Mouse Actions" icon="mouse" href="/guides/mouse-actions">
+    Configure mouse actions in navigation modes
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/daemon-control">
+    Learn CLI commands for scripting
+  </Card>
+  <Card title="Navigation Modes" icon="map" href="/concepts/navigation-modes">
+    Understand how navigation modes work
+  </Card>
+</CardGroup>

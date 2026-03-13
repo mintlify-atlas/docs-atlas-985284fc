@@ -1,0 +1,516 @@
+---
+title: Service Management
+description: Install and manage Neru as a system service for automatic startup
+icon: gear
+---
+
+Manage Neru as a system service to enable automatic startup on login and background execution.
+
+## Overview
+
+Neru can be installed as a system service using platform-specific service managers:
+
+- **macOS**: `launchd` (~/Library/LaunchAgents)
+- **Linux**: `systemd` (planned)
+- **Windows**: Task Scheduler (planned)
+
+<Note>
+  Currently only macOS (launchd) is fully supported. Linux and Windows support is planned.
+</Note>
+
+---
+
+## macOS (launchd)
+
+manage Neru as a launchd service on macOS.
+
+### Service Label
+
+```
+com.y3owk1n.neru
+```
+
+### Installation Location
+
+```
+~/Library/LaunchAgents/com.y3owk1n.neru.plist
+```
+
+---
+
+## neru services install
+
+Install and load the Neru service.
+
+```bash
+neru services install
+```
+
+### Description
+
+Installs the launchd service configuration and loads it immediately. The service will:
+
+- Start automatically on login
+- Keep Neru running in the background
+- Restart automatically if it crashes
+- Run in Aqua session (GUI context)
+
+### Service Configuration
+
+The installed plist configures:
+
+<ParamField path="Label" type="string">
+  Service identifier: `com.y3owk1n.neru`
+</ParamField>
+
+<ParamField path="ProgramArguments" type="array">
+  Command to execute: `["<neru-binary-path>", "launch"]`
+  
+  Uses the current binary path automatically.
+</ParamField>
+
+<ParamField path="RunAtLoad" type="boolean">
+  **true** - Start service immediately when loaded
+</ParamField>
+
+<ParamField path="KeepAlive" type="boolean">
+  **true** - Restart service if it exits
+</ParamField>
+
+<ParamField path="ProcessType" type="string">
+  **Interactive** - Allow GUI interactions
+</ParamField>
+
+<ParamField path="LimitLoadToSessionType" type="string">
+  **Aqua** - Only run in GUI login sessions
+</ParamField>
+
+<ParamField path="Nice" type="integer">
+  **-10** - Higher priority than normal processes
+</ParamField>
+
+<ParamField path="ThrottleInterval" type="integer">
+  **10** - Wait 10 seconds between restart attempts
+</ParamField>
+
+### Log Files
+
+Service logs are written to:
+
+```bash
+# Standard output
+/tmp/neru.log
+
+# Standard error
+/tmp/neru.err
+```
+
+### Environment
+
+The service sets the PATH environment variable:
+
+```
+/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+```
+
+### Examples
+
+<CodeGroup>
+```bash Install service
+neru services install
+# Output: Service installed and loaded successfully
+```
+
+```bash Check installation
+ls -l ~/Library/LaunchAgents/com.y3owk1n.neru.plist
+```
+
+```bash View plist
+cat ~/Library/LaunchAgents/com.y3owk1n.neru.plist
+```
+</CodeGroup>
+
+### Error Handling
+
+<AccordionGroup>
+  <Accordion title="Service Already Loaded">
+    If service is already loaded:
+    
+    ```
+    Error: service is already loaded; check for existing installations
+    (e.g., nix-darwin, home-manager) and uninstall them first
+    ```
+    
+    **Solution**: Uninstall existing service first:
+    ```bash
+    neru services uninstall
+    # or manually:
+    launchctl bootout gui/$(id -u)/com.y3owk1n.neru
+    ```
+  </Accordion>
+  
+  <Accordion title="Plist Already Exists">
+    If plist file already exists:
+    
+    ```
+    Error: plist file already exists at ~/Library/LaunchAgents/com.y3owk1n.neru.plist;
+    remove it manually or uninstall first
+    ```
+    
+    **Solution**: Remove manually or use uninstall:
+    ```bash
+    rm ~/Library/LaunchAgents/com.y3owk1n.neru.plist
+    neru services install
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## neru services uninstall
+
+Unload and remove the Neru service.
+
+```bash
+neru services uninstall
+```
+
+### Description
+
+Unloads the service (stops it) and removes the plist file. Neru will no longer start automatically on login.
+
+### What It Does
+
+1. Unloads service using `launchctl bootout`
+2. Removes plist file from ~/Library/LaunchAgents
+3. Cleans up service configuration
+
+### Examples
+
+<CodeGroup>
+```bash Uninstall service
+neru services uninstall
+# Output: Service uninstalled successfully
+```
+
+```bash Verify removal
+ls ~/Library/LaunchAgents/com.y3owk1n.neru.plist
+# Output: No such file or directory
+```
+</CodeGroup>
+
+---
+
+## neru services start
+
+Start the Neru service.
+
+```bash
+neru services start
+```
+
+### Description
+
+Starts the service using `launchctl start`. The service must already be loaded (installed).
+
+### Requirements
+
+<Warning>
+  Service must be installed first with `neru services install`.
+</Warning>
+
+### Examples
+
+```bash
+neru services start
+# Output: Service started
+```
+
+---
+
+## neru services stop
+
+Stop the Neru service.
+
+```bash
+neru services stop
+```
+
+### Description
+
+Stops the service using `launchctl stop`. The service remains loaded and will restart on next login or if `KeepAlive` triggers.
+
+### Note
+
+<Info>
+  With `KeepAlive=true`, the service may restart automatically. Use `uninstall` to permanently disable.
+</Info>
+
+### Examples
+
+```bash
+neru services stop
+# Output: Service stopped
+```
+
+---
+
+## neru services restart
+
+Restart the Neru service.
+
+```bash
+neru services restart
+```
+
+### Description
+
+Stops and then starts the service. Useful for applying configuration changes or recovering from errors.
+
+### Examples
+
+```bash
+neru services restart
+# Output: Service restarted
+```
+
+---
+
+## neru services status
+
+Check the status of the Neru service.
+
+```bash
+neru services status
+```
+
+### Description
+
+Checks if the service is loaded using `launchctl list`.
+
+### Output
+
+- **Service loaded** - Service is installed and loaded
+- **Service not loaded** - Service is not installed or not loaded
+
+### Examples
+
+<CodeGroup>
+```bash Check status
+neru services status
+# Output: Service loaded
+```
+
+```bash Status in script
+#!/bin/bash
+STATUS=$(neru services status)
+if [[ "$STATUS" == *"loaded"* ]]; then
+    echo "Service is active"
+else
+    echo "Service is not active"
+    neru services install
+fi
+```
+</CodeGroup>
+
+---
+
+## Alternative Installation Methods
+
+If you installed Neru via package managers, use their service management:
+
+### Nix / home-manager
+
+```nix
+# ~/.config/home-manager/home.nix
+{
+  launchd.agents.neru = {
+    enable = true;
+    config = {
+      ProgramArguments = [ "${pkgs.neru}/bin/neru" "launch" ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      ProcessType = "Interactive";
+      LimitLoadToSessionType = "Aqua";
+    };
+  };
+}
+```
+
+### nix-darwin
+
+```nix
+# ~/.config/darwin/configuration.nix
+{
+  launchd.user.agents.neru = {
+    serviceConfig = {
+      ProgramArguments = [ "${pkgs.neru}/bin/neru" "launch" ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      ProcessType = "Interactive";
+      LimitLoadToSessionType = "Aqua";
+    };
+  };
+}
+```
+
+<Warning>
+  If using alternative installation methods, do NOT use `neru services install` as it will conflict.
+</Warning>
+
+---
+
+## Troubleshooting
+
+### Service Not Starting
+
+<Steps>
+  <Step title="Check status">
+    ```bash
+    neru services status
+    ```
+  </Step>
+  <Step title="Check logs">
+    ```bash
+    cat /tmp/neru.log
+    cat /tmp/neru.err
+    ```
+  </Step>
+  <Step title="Verify permissions">
+    Ensure Accessibility permissions are granted in System Settings
+  </Step>
+  <Step title="Check launchctl">
+    ```bash
+    launchctl list | grep neru
+    ```
+  </Step>
+</Steps>
+
+### Service Keeps Crashing
+
+```bash
+# Check error log
+cat /tmp/neru.err
+
+# Check system log
+log show --predicate 'process == "neru"' --last 1h
+
+# Disable KeepAlive temporarily
+launchctl stop com.y3owk1n.neru
+```
+
+### Cannot Install - Already Loaded
+
+```bash
+# Find which installation method is active
+launchctl list | grep neru
+
+# If from neru services:
+neru services uninstall
+
+# If from other source, unload manually:
+launchctl bootout gui/$(id -u)/com.y3owk1n.neru
+```
+
+### Permission Denied
+
+```bash
+# Ensure LaunchAgents directory exists
+mkdir -p ~/Library/LaunchAgents
+
+# Check directory permissions
+ls -ld ~/Library/LaunchAgents
+
+# Fix permissions if needed
+chmod 755 ~/Library/LaunchAgents
+```
+
+---
+
+## Manual Service Management
+
+For advanced users, manage the service directly with `launchctl`:
+
+### Load Service
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.y3owk1n.neru.plist
+```
+
+### Unload Service
+
+```bash
+launchctl bootout gui/$(id -u)/com.y3owk1n.neru
+```
+
+### Start Service
+
+```bash
+launchctl start com.y3owk1n.neru
+```
+
+### Stop Service
+
+```bash
+launchctl stop com.y3owk1n.neru
+```
+
+### Check Service
+
+```bash
+launchctl list com.y3owk1n.neru
+```
+
+### View Service Output
+
+```bash
+# Standard output
+tail -f /tmp/neru.log
+
+# Standard error
+tail -f /tmp/neru.err
+```
+
+---
+
+## Future Platform Support
+
+### Linux (systemd)
+
+Planned support for systemd user services:
+
+```bash
+# Planned commands
+neru services install    # Install systemd unit
+neru services uninstall  # Remove systemd unit
+systemctl --user status neru
+```
+
+### Windows (Task Scheduler)
+
+Planned support for Windows Task Scheduler:
+
+```bash
+# Planned commands
+neru services install    # Create scheduled task
+neru services uninstall  # Remove scheduled task
+```
+
+---
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Daemon Control" icon="power-off" href="/cli/daemon-control">
+    Start, stop, and control the daemon
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/cli/config">
+    Configure service behavior
+  </Card>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Initial installation instructions
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting/common-issues">
+    Common issues and solutions
+  </Card>
+</CardGroup>

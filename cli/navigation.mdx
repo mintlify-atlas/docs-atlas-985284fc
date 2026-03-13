@@ -1,0 +1,491 @@
+---
+title: Navigation Commands
+description: Control navigation modes for mouseless interaction
+icon: compass
+---
+
+Neru provides four navigation modes: hints, grid, recursive-grid, and scroll. Each mode can be activated via CLI or hotkey.
+
+## Overview
+
+Navigation modes enable mouseless interaction with UI elements:
+
+- **Hints** - Overlay labels on clickable elements using Accessibility APIs
+- **Grid** - Coordinate-based navigation with row/column selection
+- **Recursive Grid** - Recursive cell-based navigation that narrows to target
+- **Scroll** - Vim-style scrolling at cursor position
+
+<Note>
+  All navigation commands require a running daemon. Use `neru launch` to start the daemon first.
+</Note>
+
+---
+
+## Common Options
+
+All navigation modes support the `--action` flag to perform an action upon selection.
+
+<ParamField path="--action" type="string" default="">
+  Action to perform when location is selected. Can also use `-a` shorthand.
+  
+  **Supported actions:**
+  - `left_click`
+  - `right_click`
+  - `middle_click`
+  - `mouse_down`
+  - `mouse_up`
+  
+  ```bash
+  neru hints --action right_click
+  neru grid -a left_click
+  ```
+</ParamField>
+
+### How --action Works
+
+When `--action` is specified, the action executes automatically when a location is selected, then the mode exits.
+
+<Tip>
+  The `--action` flag is particularly useful for **hints mode** for vimium-style workflows. For other modes, consider using `auto_exit_actions` in the config file instead.
+</Tip>
+
+#### Behavior by Mode
+
+- **Hints**: Action executes immediately when hint label is satisfied (e.g., typing "AA")
+- **Grid**: Action executes after the final sublayer (3x3) selection
+- **Recursive Grid**: Action executes after reaching the last depth
+- **Scroll**: Action flag not applicable
+
+---
+
+## neru hints
+
+Activate hint mode to show clickable labels on UI elements.
+
+```bash
+neru hints
+```
+
+### Description
+
+Hint mode uses macOS Accessibility APIs to identify clickable UI elements and overlays hint labels on them. Type the hint label to select an element.
+
+### Usage
+
+<Steps>
+  <Step title="Activate">
+    Run `neru hints` or press configured hotkey
+  </Step>
+  <Step title="Select">
+    Type the hint label shown over target element
+  </Step>
+  <Step title="Action">
+    Default action (click) executes automatically
+  </Step>
+</Steps>
+
+### Options
+
+<ParamField path="--action" type="string" default="">
+  Action to perform on hint selection.
+  
+  ```bash
+  neru hints --action left_click     # Left-click
+  neru hints --action right_click    # Right-click (context menu)
+  neru hints --action middle_click   # Middle-click
+  ```
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bash Basic hints
+neru hints
+# Type hint label (e.g., "AB") to click element
+```
+
+```bash Right-click via hints
+neru hints --action right_click
+# Type hint label to open context menu
+```
+
+```bash Shorthand
+neru hints -a right_click
+```
+</CodeGroup>
+
+### Configuration
+
+Customize hint mode appearance and behavior in your config file:
+
+- Label style (font, colors, size)
+- Hint generation strategy
+- Filter patterns
+- Auto-exit behavior
+
+See [Configuration Guide](/guides/configuration) for details.
+
+---
+
+## neru grid
+
+Activate grid mode for coordinate-based navigation.
+
+```bash
+neru grid
+```
+
+### Description
+
+Grid mode divides the screen into a coordinate-based grid for accessibility-independent navigation. Type row+column labels (e.g., "ab") to select a position.
+
+### Usage
+
+<Steps>
+  <Step title="Activate">
+    Run `neru grid` or press configured hotkey
+  </Step>
+  <Step title="Select">
+    Type row label + column label (e.g., "ab")
+  </Step>
+  <Step title="Refine">
+    Grid recursively narrows to selected position
+  </Step>
+  <Step title="Action">
+    Action executes at final position
+  </Step>
+</Steps>
+
+### Options
+
+<ParamField path="--action" type="string" default="">
+  Action to perform on grid selection.
+  
+  ```bash
+  neru grid --action left_click
+  neru grid --action right_click
+  ```
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bash Basic grid
+neru grid
+# Type "ab" for row A, column B
+```
+
+```bash Left-click via grid
+neru grid --action left_click
+```
+
+```bash Right-click via grid
+neru grid -a right_click
+```
+</CodeGroup>
+
+### Configuration
+
+Customize grid appearance:
+
+- Grid dimensions
+- Label style
+- Colors
+- Sublayer depth
+
+See [Configuration Guide](/guides/configuration) for details.
+
+---
+
+## neru recursive_grid
+
+Activate recursive-grid mode for cell-based navigation.
+
+```bash
+neru recursive_grid
+# or using alias:
+neru recursive-grid
+```
+
+### Description
+
+Recursive grid provides recursive cell-based navigation that works anywhere on screen. The screen is divided into NxN cells (default 2x2), and each selection narrows the active area.
+
+### Key Bindings (Default)
+
+| Key | Action |
+|-----|--------|
+| `u` | Select upper-left cell |
+| `i` | Select upper-right cell |
+| `j` | Select lower-left cell |
+| `k` | Select lower-right cell |
+| `Backspace` / `Delete` | Move up one depth and recenter |
+| `Space` | Reset to initial center |
+| `Esc` | Exit mode |
+
+<Note>
+  These are the default warpd-style key bindings. Customize in your config file.
+</Note>
+
+### Usage
+
+<Steps>
+  <Step title="Activate">
+    Run `neru recursive_grid` or press configured hotkey
+  </Step>
+  <Step title="Narrow">
+    Press `u`, `i`, `j`, or `k` to select a cell
+  </Step>
+  <Step title="Repeat">
+    Continue pressing cell keys to narrow selection
+  </Step>
+  <Step title="Backtrack">
+    Press `Backspace` to move up one level
+  </Step>
+  <Step title="Reset">
+    Press `Space` (or configured reset key) to start over
+  </Step>
+</Steps>
+
+### Options
+
+<ParamField path="--action" type="string" default="">
+  Action to perform when reaching minimum cell size.
+  
+  ```bash
+  neru recursive_grid --action left_click
+  ```
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bash Basic recursive grid
+neru recursive_grid
+# Press u/i/j/k to narrow selection
+# Press backspace to go back
+# Press space to reset
+```
+
+```bash With click action
+neru recursive_grid --action left_click
+```
+
+```bash Using alias
+neru recursive-grid
+```
+</CodeGroup>
+
+### Configuration
+
+Customize recursive grid:
+
+- Grid dimensions (e.g., 2x2, 3x3)
+- Cell key mappings
+- Reset key
+- Minimum cell size
+- Colors and overlay style
+
+See [Configuration Guide](/guides/configuration) for details.
+
+---
+
+## neru scroll
+
+Activate vim-style scrolling at the cursor position.
+
+```bash
+neru scroll
+```
+
+### Description
+
+Scroll mode enables vim-style scrolling at the current cursor position. Keys are fully configurable in your config file.
+
+### Default Key Bindings
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Scroll down/up |
+| `h` / `l` | Scroll left/right |
+| `Ctrl+d` / `Ctrl+u` | Half-page down/up |
+| `gg` | Jump to top |
+| `Shift+G` | Jump to bottom |
+| `Esc` | Exit scroll mode |
+
+<Note>
+  All scroll keys are customizable in `[scroll.key_bindings]` config section.
+</Note>
+
+### Usage
+
+<Steps>
+  <Step title="Position">
+    Move cursor to area you want to scroll
+  </Step>
+  <Step title="Activate">
+    Run `neru scroll` or press configured hotkey
+  </Step>
+  <Step title="Scroll">
+    Use j/k/h/l or other configured keys to scroll
+  </Step>
+  <Step title="Navigate">
+    Use gg/G for quick jumps
+  </Step>
+  <Step title="Exit">
+    Press `Esc` to exit scroll mode
+  </Step>
+</Steps>
+
+### Examples
+
+<CodeGroup>
+```bash Basic scroll
+neru scroll
+# Use j/k to scroll down/up
+# Use gg to jump to top
+# Use Shift+G to jump to bottom
+```
+
+```bash Scroll workflow
+# Position cursor over scrollable area
+# Activate scroll mode
+neru scroll
+# Navigate with vim keys
+# Press Esc to exit
+```
+</CodeGroup>
+
+### Configuration
+
+Customize scroll behavior:
+
+- Key bindings for each action
+- Multi-key sequences (e.g., `gg`)
+- Modifier combinations (e.g., `Cmd+Up`)
+- Scroll distances
+
+Each action can have multiple key bindings. See [Configuration Guide](/guides/configuration) for details.
+
+---
+
+## Workflow Examples
+
+### Quick Right-Click Menu
+
+```bash
+# Show hints and right-click selected element
+neru hints --action right_click
+```
+
+### Precise Grid Navigation
+
+```bash
+# Use grid for precise positioning
+neru grid
+# Type row+column (e.g., "cd") to select position
+```
+
+### Vim-Style Page Navigation
+
+```bash
+# Activate scroll mode
+neru scroll
+# Use j/k for scrolling
+# Use gg/G for quick navigation
+# Press Esc to exit
+```
+
+### External Hotkey Integration
+
+Integrate with skhd or other hotkey managers:
+
+```bash ~/.config/skhd/skhdrc
+# Navigation modes
+ctrl - f : neru hints
+ctrl - g : neru grid
+ctrl - r : neru recursive_grid
+ctrl - s : neru scroll
+
+# With actions
+ctrl + shift - f : neru hints --action right_click
+ctrl + shift - g : neru grid --action left_click
+
+# Cancel mode
+esc : neru idle
+```
+
+---
+
+## Troubleshooting
+
+### Hints Not Showing
+
+<AccordionGroup>
+  <Accordion title="Grant Accessibility Permissions">
+    Neru requires Accessibility permissions to detect UI elements.
+    
+    **System Settings → Privacy & Security → Accessibility → Enable Neru**
+  </Accordion>
+  
+  <Accordion title="Check Mode Configuration">
+    Verify hint mode is enabled in config:
+    
+    ```bash
+    neru config dump | grep -A 5 "hint"
+    ```
+  </Accordion>
+  
+  <Accordion title="Application Compatibility">
+    Some applications may not expose Accessibility information. Grid mode works universally.
+  </Accordion>
+</AccordionGroup>
+
+### Grid Not Appearing
+
+<AccordionGroup>
+  <Accordion title="Check Overlay Permissions">
+    macOS may block overlays. Grant Screen Recording permission if needed.
+  </Accordion>
+  
+  <Accordion title="Verify Grid Configuration">
+    ```bash
+    neru config dump | grep -A 5 "grid"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Scroll Not Working
+
+<AccordionGroup>
+  <Accordion title="Position Cursor Correctly">
+    Cursor must be over a scrollable area before activating scroll mode.
+  </Accordion>
+  
+  <Accordion title="Check Key Bindings">
+    Verify scroll key bindings in config:
+    
+    ```bash
+    neru config dump | grep -A 10 "scroll"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Daemon Control" icon="power-off" href="/cli/daemon-control">
+    Start, stop, and check daemon status
+  </Card>
+  <Card title="Action Commands" icon="hand-pointer" href="/cli/actions">
+    Perform immediate mouse actions
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/cli/config">
+    Customize navigation behavior
+  </Card>
+  <Card title="Configuration Guide" icon="book" href="/guides/configuration">
+    Full configuration reference
+  </Card>
+</CardGroup>

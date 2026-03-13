@@ -1,0 +1,457 @@
+---
+title: 'Building Neru'
+description: 'Set up your development environment and build Neru from source'
+icon: 'hammer'
+---
+
+Get Neru running locally and start contributing in minutes.
+
+## Prerequisites
+
+Before building Neru, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Go 1.26+" icon="golang">
+    [Install Go](https://golang.org/dl/)
+    
+    ```bash
+    go version  # Should be 1.26+
+    ```
+  </Card>
+  
+  <Card title="Xcode Command Line Tools" icon="apple">
+    Required for CGo and Objective-C compilation
+    
+    ```bash
+    xcode-select --install
+    ```
+  </Card>
+  
+  <Card title="Just" icon="terminal">
+    Command runner for build automation
+    
+    ```bash
+    brew install just
+    ```
+  </Card>
+  
+  <Card title="golangci-lint" icon="check-circle">
+    Go linter and formatter
+    
+    ```bash
+    brew install golangci-lint
+    ```
+  </Card>
+</CardGroup>
+
+## Development Environment Setup
+
+Choose one of the following setup methods:
+
+### Option A: Devbox (Recommended)
+
+[Devbox](https://www.jetify.com/devbox) provides an isolated development environment with all required tools pre-configured.
+
+<Steps>
+  <Step title="Install Devbox">
+    ```bash
+    curl -fsSL https://get.jetify.com/devbox | bash
+    ```
+  </Step>
+  
+  <Step title="Enter the development shell">
+    **Option 1**: Manual activation
+    ```bash
+    devbox shell
+    ```
+    
+    **Option 2**: Automatic activation with direnv (recommended)
+    ```bash
+    # Install direnv
+    brew install direnv
+    
+    # Add to your shell config (~/.bashrc, ~/.zshrc, or ~/.config/fish/config.fish)
+    eval "$(direnv hook bash)"  # or zsh/fish
+    
+    # The .envrc file will automatically activate devbox when you cd into the project
+    ```
+  </Step>
+</Steps>
+
+Devbox automatically installs and manages:
+- Go 1.26.0
+- gopls (Go language server)
+- gotools, gofumpt, golines (Go formatting tools)
+- golangci-lint (linter)
+- just (command runner)
+- clang-tools (C/C++ tools for CGo)
+
+### Option B: Manual Installation
+
+Install essential tools manually using Homebrew:
+
+```bash
+brew install go just golangci-lint llvm
+```
+
+**Optional additional tools** (install via `go install` if desired):
+
+```bash
+go install golang.org/x/tools/gopls@latest
+go install mvdan.cc/gofumpt@latest
+go install github.com/segmentio/golines@latest
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/y3owk1n/neru.git
+    cd neru
+    ```
+  </Step>
+  
+  <Step title="Set up development environment">
+    **Using Devbox (recommended)**:
+    ```bash
+    devbox shell
+    ```
+    
+    **Manual setup**: Ensure all prerequisites are installed
+  </Step>
+  
+  <Step title="Verify setup">
+    ```bash
+    go version          # Should be 1.26+
+    just --version
+    golangci-lint --version
+    just --list         # See all available commands
+    ```
+  </Step>
+  
+  <Step title="Build and run">
+    ```bash
+    just build
+    ./bin/neru launch
+    ```
+  </Step>
+  
+  <Step title="Test it works">
+    ```bash
+    neru hints  # Should show hint overlays
+    ```
+  </Step>
+</Steps>
+
+## Build Commands
+
+Neru uses [Just](https://github.com/casey/just) as a command runner (alternative to Make).
+
+### Common Build Tasks
+
+| Task   | Command                 | Description                        |
+| ------ | ----------------------- | ---------------------------------- |
+| Build  | `just build`            | Development build (auto-detects version from git tags) |
+| Test   | `just test`             | Run unit tests                     |
+| Test   | `just test-integration` | Run integration tests              |
+| Test   | `just test-all`         | Run all tests (unit + integration) |
+| Test   | `just test-race`        | Run tests with race detection      |
+| Lint   | `just lint`             | Run linters                        |
+| Format | `just fmt`              | Format code                        |
+| Run    | `just run`              | Build and run the application      |
+| Clean  | `just clean`            | Remove build artifacts             |
+
+### Build Variants
+
+<Tabs>
+  <Tab title="Development">
+    ```bash
+    # Development build
+    just build
+    
+    # Build with custom version
+    just build-version v1.0.0
+    ```
+    
+    Creates a debug build with version info from git tags.
+  </Tab>
+  
+  <Tab title="Release">
+    ```bash
+    # Release build (optimized, stripped)
+    just release
+    ```
+    
+    Creates an optimized build with debug symbols stripped.
+  </Tab>
+  
+  <Tab title="Bundle">
+    ```bash
+    # Build macOS app bundle
+    just bundle
+    ```
+    
+    Creates a macOS `.app` bundle for distribution.
+  </Tab>
+</Tabs>
+
+### Manual Build (Without Just)
+
+If you prefer not to use Just:
+
+```bash
+# Basic build
+go build -o bin/neru ./cmd/neru
+
+# With version info
+VERSION=$(git describe --tags --always --dirty)
+go build \
+  -ldflags="-s -w -X github.com/y3owk1n/neru/internal/cli.Version=$VERSION" \
+  -o bin/neru \
+  ./cmd/neru
+
+# For release (optimized)
+go build \
+  -ldflags="-s -w -X github.com/y3owk1n/neru/internal/cli.Version=$VERSION" \
+  -trimpath \
+  -o bin/neru \
+  ./cmd/neru
+```
+
+### Build Flags Explained
+
+- `-ldflags="-s -w"`: Strip debug info and symbol table (smaller binary)
+- `-trimpath`: Remove file system paths from binary
+- `-X pkg.Var=value`: Set string variable at build time (version injection)
+
+## Testing
+
+Neru has a comprehensive test suite with clear separation between unit tests and integration tests.
+
+### Test Organization
+
+| Test Type             | File Pattern              | Purpose                                                            | Command                 |
+| --------------------- | ------------------------- | ------------------------------------------------------------------ | ----------------------- |
+| **Unit Tests**        | `*_test.go`               | Business logic with mocks (no build tag required)                  | `just test`             |
+| **Integration Tests** | `*_integration_*_test.go` | Real system interactions (tagged `//go:build integration && <os>`) | `just test-integration` |
+
+### Running Tests
+
+<Tabs>
+  <Tab title="Unit Tests">
+    ```bash
+    # Run all unit tests (fast, CI)
+    just test
+    
+    # Test specific package
+    go test ./internal/core/domain/hint/
+    
+    # Test with verbose output
+    go test -v ./internal/app/services/
+    ```
+  </Tab>
+  
+  <Tab title="Integration Tests">
+    ```bash
+    # Run all integration tests (comprehensive, local)
+    just test-integration
+    
+    # Integration test specific component
+    go test -tags=integration ./internal/core/infra/accessibility/
+    ```
+  </Tab>
+  
+  <Tab title="All Tests">
+    ```bash
+    # Run all tests (unit + integration)
+    just test-all
+    
+    # With race detection
+    just test-race
+    ```
+  </Tab>
+</Tabs>
+
+### Test Coverage
+
+```bash
+# Generate coverage report
+just test-coverage
+
+# View coverage in browser
+go tool cover -html=coverage.out
+```
+
+## Linting and Formatting
+
+### Format Code
+
+```bash
+# Format all code
+just fmt
+
+# This runs:
+# - goimports (import organization)
+# - gofumpt (stricter formatting)
+```
+
+### Run Linters
+
+```bash
+# Run all linters
+just lint
+
+# Auto-fix issues where possible
+golangci-lint run --fix
+```
+
+## Debugging
+
+To debug Neru during development:
+
+### Enable Debug Logging
+
+Edit your config file (`~/.config/neru/config.toml`):
+
+```toml
+[logging]
+log_level = "debug"
+```
+
+### View Logs
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    tail -f ~/Library/Logs/neru/app.log
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    ```bash
+    tail -f ~/.local/state/neru/log/app.log
+    ```
+  </Tab>
+</Tabs>
+
+### Use Delve Debugger
+
+```bash
+# Install Delve
+go install github.com/go-delve/delve/cmd/dlv@latest
+
+# Debug Neru
+dlv debug ./cmd/neru
+```
+
+## Development Tips
+
+### Quick Iteration
+
+```bash
+# Build and run
+just build && ./bin/neru launch
+
+# Watch for changes (requires entr)
+ls **/*.go | entr -r sh -c 'just build && ./bin/neru launch'
+```
+
+### Pre-commit Validation
+
+```bash
+# Full validation before commit
+just test && just lint && just build
+```
+
+### Install Pre-commit Hooks
+
+```bash
+# Install pre-commit hooks
+cp scripts/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+## Cross-Platform Setup
+
+Neru can be developed on any OS, but some features require platform-specific APIs.
+
+- **macOS**: Full environment support (CGo, Accessibility, Overlays)
+- **Linux**: Requires `gcc` and `pkg-config` for build foundations. AT-SPI and X11/Wayland development tools are recommended.
+- **Windows**: Requires a C compiler (e.g., MinGW or MSVC) for CGo components. UI Automation (UIA) SDK is recommended.
+
+## IDE Setup
+
+For the best development experience, we recommend:
+
+<CardGroup cols={2}>
+  <Card title="VS Code" icon="code">
+    Install the [Go extension](https://marketplace.visualstudio.com/items?itemName=golang.go)
+  </Card>
+  
+  <Card title="GoLand" icon="j">
+    JetBrains IDE with excellent Go support
+  </Card>
+  
+  <Card title="EditorConfig" icon="file-code">
+    Install EditorConfig plugin for consistent formatting
+  </Card>
+  
+  <Card title="Git Hooks" icon="git">
+    Set up pre-commit hooks to automate formatting and linting
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Build Failures
+
+<AccordionGroup>
+  <Accordion title="CGo compilation errors">
+    Ensure Xcode Command Line Tools are installed:
+    ```bash
+    xcode-select --install
+    ```
+  </Accordion>
+  
+  <Accordion title="Missing dependencies">
+    Update Go modules:
+    ```bash
+    go mod tidy
+    go mod download
+    ```
+  </Accordion>
+  
+  <Accordion title="Version detection issues">
+    Ensure you're in a git repository with tags:
+    ```bash
+    git fetch --tags
+    git describe --tags --always --dirty
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Test Failures
+
+- **Integration tests failing**: Ensure you have the required platform APIs (macOS Accessibility permissions)
+- **Race detector warnings**: These indicate potential concurrency issues that should be addressed
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand Neru's system architecture
+  </Card>
+  
+  <Card title="Coding Standards" icon="code" href="/development/coding-standards">
+    Follow Go and Objective-C conventions
+  </Card>
+  
+  <Card title="Contributing" icon="users" href="/development/overview">
+    Submit your first pull request
+  </Card>
+  
+  <Card title="GitHub Issues" icon="github" href="https://github.com/y3owk1n/neru/issues">
+    Find issues to work on
+  </Card>
+</CardGroup>

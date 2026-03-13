@@ -1,0 +1,697 @@
+---
+title: "IPC Automation"
+description: "Programmatic control of Neru via Inter-Process Communication"
+---
+
+## Overview
+
+Neru uses Unix domain sockets for Inter-Process Communication (IPC) between the CLI and daemon. This architecture enables fast, reliable communication and allows you to integrate Neru with any programming language that supports Unix sockets.
+
+<Card title="Why IPC?" icon="network-wired">
+  - **Fast**: Local socket communication with minimal overhead
+  - **Reliable**: Connection-oriented protocol with error handling
+  - **Concurrent**: Multiple CLI commands can run simultaneously
+  - **Secure**: File-based permissions (0600) restrict access
+  - **Language-agnostic**: Works with any language supporting Unix sockets
+</Card>
+
+## Architecture
+
+### Communication Flow
+
+```
+┌─────────────┐         Unix Domain Socket          ┌─────────────┐
+│             │    /var/folders/.../T/neru.sock     │             │
+│  CLI Client │ ◄──────────────────────────────────► │   Daemon    │
+│             │         JSON Messages                │             │
+└─────────────┘                                      └─────────────┘
+       │                                                     │
+       │ 1. Send Command                                     │
+       ├────────────────────────────────────────────────────►│
+       │    {"action": "hints", "args": []}                 │
+       │                                                     │
+       │                                        2. Process  │
+       │                                                     │
+       │ 3. Receive Response                                 │
+       │◄────────────────────────────────────────────────────┤
+       │    {"success": true, "message": "OK"}              │
+```
+
+### Socket Location
+
+The socket is created in the OS temporary directory:
+
+```
+/var/folders/<hash>/<hash>/T/neru.sock  # macOS
+/tmp/neru.sock                           # Linux (planned)
+```
+
+Source: [internal/core/infra/ipc/ipc.go:92-96](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L92-L96)
+
+### Protocol Version
+
+Current protocol version: **1.0.0**
+
+Version checking ensures compatibility between client and server.
+
+Source: [internal/core/infra/ipc/ipc.go:31-32](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L31-L32)
+
+## Message Format
+
+### Request Structure
+
+```json
+{
+  "version": "1.0.0",
+  "action": "hints",
+  "params": {},
+  "args": ["left_click"]
+}
+```
+
+**Fields:**
+- `version` (string, optional): Protocol version (defaults to 1.0.0)
+- `action` (string, required): Command to execute
+- `params` (object, optional): Key-value parameters
+- `args` (array, optional): Positional arguments
+
+Source: [internal/core/infra/ipc/ipc.go:55-61](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L55-L61)
+
+### Response Structure
+
+```json
+{
+  "version": "1.0.0",
+  "success": true,
+  "message": "Hints mode activated",
+  "code": "OK",
+  "data": {}
+}
+```
+
+**Fields:**
+- `version` (string): Server protocol version
+- `success` (boolean): Whether command succeeded
+- `message` (string, optional): Human-readable message
+- `code` (string, optional): Error or success code
+- `data` (any, optional): Additional response data
+
+Source: [internal/core/infra/ipc/ipc.go:63-70](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L63-L70)
+
+## Response Codes
+
+| Code | Description | When It Occurs |
+|------|-------------|----------------|
+| `OK` | Success | Command executed successfully |
+| `ERR_UNKNOWN_COMMAND` | Invalid command | Action not recognized |
+| `ERR_NOT_RUNNING` | Not running | Daemon is stopped/paused |
+| `ERR_ALREADY_RUNNING` | Already running | Daemon already active |
+| `ERR_MODE_DISABLED` | Mode disabled | Mode disabled in config |
+| `ERR_INVALID_INPUT` | Invalid input | Invalid parameters/arguments |
+| `ERR_ACTION_FAILED` | Action failed | Action execution error |
+| `ERR_VERSION_MISMATCH` | Version mismatch | Incompatible protocol version |
+
+Source: [internal/core/infra/ipc/ipc.go:45-53](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L45-L53)
+
+## Timeouts
+
+The IPC system uses several timeout values:
+
+```go
+DefaultTimeout          = 5 seconds   // Default IPC operation timeout
+ConnectionTimeout       = 2 seconds   // Socket connection timeout
+PingTimeout            = 500ms        // Health check timeout
+ConnectionReadTimeout  = 30 seconds   // Read operation timeout
+```
+
+Source: [internal/core/infra/ipc/ipc.go:24-42](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L24-L42)
+
+<Warning>
+  Commands that take longer than the timeout will return a timeout error. Adjust timeouts using the `--timeout` flag or in your client implementation.
+</Warning>
+
+## Client Implementation
+
+### Go Client
+
+Use the built-in IPC client:
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "time"
+    
+    "github.com/y3owk1n/neru/internal/core/infra/ipc"
+)
+
+func main() {
+    // Create client
+    client := ipc.NewClient()
+    
+    // Send command with default timeout
+    response, err := client.Send(ipc.Command{
+        Action: "hints",
+        Args:   []string{"left_click"},
+    })
+    if err != nil {
+        log.Fatalf("Failed to send command: %v", err)
+    }
+    
+    if !response.Success {
+        log.Fatalf("Command failed: %s (code: %s)", response.Message, response.Code)
+    }
+    
+    fmt.Println("Success:", response.Message)
+}
+```
+
+With custom timeout:
+
+```go
+// Send with 10-second timeout
+response, err := client.SendWithTimeout(
+    ipc.Command{Action: "hints"},
+    10 * time.Second,
+)
+```
+
+Source: [internal/core/infra/ipc/ipc.go:293-423](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L293-L423)
+
+### Python Client
+
+```python
+import socket
+import json
+import os
+import tempfile
+
+class NeruClient:
+    def __init__(self):
+        temp_dir = tempfile.gettempdir()
+        self.socket_path = os.path.join(temp_dir, "neru.sock")
+        self.timeout = 5.0
+    
+    def send_command(self, action, args=None, params=None):
+        """Send command to Neru daemon via IPC."""
+        if args is None:
+            args = []
+        if params is None:
+            params = {}
+        
+        # Create command
+        command = {
+            "version": "1.0.0",
+            "action": action,
+            "args": args,
+            "params": params
+        }
+        
+        # Connect to socket
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(self.timeout)
+        
+        try:
+            sock.connect(self.socket_path)
+            
+            # Send command
+            message = json.dumps(command) + "\n"
+            sock.sendall(message.encode('utf-8'))
+            
+            # Receive response
+            response_data = b""
+            while True:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                response_data += chunk
+                # Check if we have a complete JSON object
+                try:
+                    response = json.loads(response_data.decode('utf-8'))
+                    break
+                except json.JSONDecodeError:
+                    continue
+            
+            return response
+            
+        finally:
+            sock.close()
+    
+    def is_running(self):
+        """Check if Neru daemon is running."""
+        try:
+            response = self.send_command("ping")
+            return response.get("success", False)
+        except:
+            return False
+
+# Example usage
+if __name__ == "__main__":
+    client = NeruClient()
+    
+    # Check if running
+    if not client.is_running():
+        print("Neru is not running")
+        exit(1)
+    
+    # Send hints command
+    response = client.send_command("hints", args=["left_click"])
+    
+    if response["success"]:
+        print(f"Success: {response['message']}")
+    else:
+        print(f"Error: {response['message']} (code: {response['code']})")
+```
+
+### Node.js Client
+
+```javascript
+const net = require('net');
+const os = require('os');
+const path = require('path');
+
+class NeruClient {
+  constructor() {
+    this.socketPath = path.join(os.tmpdir(), 'neru.sock');
+    this.timeout = 5000; // ms
+  }
+
+  sendCommand(action, args = [], params = {}) {
+    return new Promise((resolve, reject) => {
+      const command = {
+        version: '1.0.0',
+        action,
+        args,
+        params
+      };
+
+      const client = net.createConnection(this.socketPath);
+      let responseData = '';
+
+      // Set timeout
+      const timeoutId = setTimeout(() => {
+        client.destroy();
+        reject(new Error('Connection timeout'));
+      }, this.timeout);
+
+      client.on('connect', () => {
+        // Send command
+        client.write(JSON.stringify(command) + '\n');
+      });
+
+      client.on('data', (data) => {
+        responseData += data.toString();
+        
+        // Try to parse response
+        try {
+          const response = JSON.parse(responseData);
+          clearTimeout(timeoutId);
+          client.end();
+          resolve(response);
+        } catch (e) {
+          // Wait for more data
+        }
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      });
+    });
+  }
+
+  async isRunning() {
+    try {
+      const response = await this.sendCommand('ping');
+      return response.success;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// Example usage
+(async () => {
+  const client = new NeruClient();
+
+  if (!await client.isRunning()) {
+    console.error('Neru is not running');
+    process.exit(1);
+  }
+
+  try {
+    const response = await client.sendCommand('hints', ['left_click']);
+    
+    if (response.success) {
+      console.log(`Success: ${response.message}`);
+    } else {
+      console.error(`Error: ${response.message} (code: ${response.code})`);
+    }
+  } catch (error) {
+    console.error('Failed to send command:', error);
+  }
+})();
+```
+
+### Shell Script Client
+
+```bash
+#!/bin/bash
+# Simple shell client using nc (netcat)
+
+SOCKET_PATH="/var/folders/$(ls /var/folders/ | head -1)/$(ls /var/folders/$(ls /var/folders/ | head -1)/ | head -1)/T/neru.sock"
+
+# Better: Get socket path from temp dir
+SOCKET_PATH="$(find $(echo $TMPDIR) -name 'neru.sock' 2>/dev/null | head -1)"
+
+if [ -z "$SOCKET_PATH" ] || [ ! -S "$SOCKET_PATH" ]; then
+    echo "Error: Neru socket not found"
+    exit 1
+fi
+
+# Send command
+send_command() {
+    local action="$1"
+    shift
+    local args="$@"
+    
+    # Build JSON command
+    local args_json=""
+    if [ -n "$args" ]; then
+        args_json=$(printf '"%s",' $args | sed 's/,$//')
+    fi
+    
+    local json=$(cat <<EOF
+{"version":"1.0.0","action":"$action","args":[$args_json]}
+EOF
+)
+    
+    # Send via nc
+    echo "$json" | nc -U "$SOCKET_PATH"
+}
+
+# Example usage
+send_command "hints" "left_click"
+```
+
+## Available Commands
+
+### Navigation Modes
+
+```json
+// Hints mode
+{"action": "hints", "args": []}
+
+// Hints with action
+{"action": "hints", "args": ["left_click"]}
+
+// Grid mode
+{"action": "grid", "args": []}
+
+// Recursive grid
+{"action": "recursive_grid", "args": []}
+
+// Scroll mode
+{"action": "scroll", "args": []}
+```
+
+### Actions
+
+```json
+// Click actions
+{"action": "action", "args": ["left_click"]}
+{"action": "action", "args": ["right_click"]}
+{"action": "action", "args": ["middle_click"]}
+{"action": "action", "args": ["mouse_down"]}
+{"action": "action", "args": ["mouse_up"]}
+
+// Mouse movement
+{"action": "action", "args": ["move_mouse", "--x=500", "--y=300"]}
+{"action": "action", "args": ["move_mouse", "--center"]}
+{"action": "action", "args": ["move_mouse", "--center", "--x=50", "--y=-30"]}
+{"action": "action", "args": ["move_mouse_relative", "--dx=10", "--dy=-5"]}
+```
+
+### Daemon Control
+
+```json
+// Start/stop
+{"action": "start", "args": []}
+{"action": "stop", "args": []}
+{"action": "idle", "args": []}
+
+// Status
+{"action": "status", "args": []}
+
+// Config
+{"action": "config", "args": []}
+{"action": "reload_config", "args": []}
+
+// Health check
+{"action": "ping", "args": []}
+```
+
+## Error Handling
+
+### Connection Errors
+
+```python
+try:
+    response = client.send_command("hints")
+except socket.error as e:
+    if e.errno == errno.ENOENT:
+        print("Socket not found - is Neru running?")
+    elif e.errno == errno.ECONNREFUSED:
+        print("Connection refused - daemon may be starting")
+    elif e.errno == errno.ETIMEDOUT:
+        print("Connection timeout - daemon may be unresponsive")
+    else:
+        print(f"Socket error: {e}")
+```
+
+### Response Errors
+
+```javascript
+const response = await client.sendCommand('hints');
+
+if (!response.success) {
+  switch (response.code) {
+    case 'ERR_MODE_DISABLED':
+      console.error('Hints mode is disabled in config');
+      break;
+    case 'ERR_UNKNOWN_COMMAND':
+      console.error('Command not recognized');
+      break;
+    case 'ERR_INVALID_INPUT':
+      console.error('Invalid command parameters');
+      break;
+    default:
+      console.error(`Error: ${response.message}`);
+  }
+}
+```
+
+### Retry Logic
+
+```go
+func sendWithRetry(client *ipc.Client, cmd ipc.Command, maxRetries int) (ipc.Response, error) {
+    var lastErr error
+    
+    for i := 0; i < maxRetries; i++ {
+        response, err := client.Send(cmd)
+        if err == nil {
+            return response, nil
+        }
+        
+        lastErr = err
+        time.Sleep(time.Duration(i+1) * time.Second)
+    }
+    
+    return ipc.Response{}, fmt.Errorf("failed after %d retries: %w", maxRetries, lastErr)
+}
+```
+
+## Concurrent Requests
+
+The IPC server handles multiple concurrent connections:
+
+```go
+// Multiple goroutines can safely send commands
+for i := 0; i < 10; i++ {
+    go func(id int) {
+        client := ipc.NewClient()
+        response, err := client.Send(ipc.Command{
+            Action: "status",
+        })
+        if err != nil {
+            log.Printf("[%d] Error: %v", id, err)
+            return
+        }
+        log.Printf("[%d] Success: %s", id, response.Message)
+    }(i)
+}
+```
+
+Source: [internal/core/infra/ipc/ipc.go:142-164](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L142-L164)
+
+<Note>
+  Commands are processed sequentially by the daemon, even if sent concurrently. The server uses a wait group to manage concurrent connections safely.
+</Note>
+
+## Security Considerations
+
+### Socket Permissions
+
+The socket is created with `0600` permissions (owner read/write only):
+
+```go
+DefaultSocketPerms = 0o600
+```
+
+Source: [internal/core/infra/ipc/ipc.go:40-41](file:///home/daytona/workspace/source/internal/core/infra/ipc/ipc.go#L40-L41)
+
+### Validation
+
+- Protocol version is validated on every request
+- Unknown commands are rejected
+- Invalid JSON is rejected with error response
+- Input parameters are validated before execution
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Validate Input" icon="shield-check">
+    Always validate user input before sending to IPC
+  </Card>
+  <Card title="Handle Errors" icon="triangle-exclamation">
+    Check response.success and response.code
+  </Card>
+  <Card title="Use Timeouts" icon="clock">
+    Set appropriate timeouts for your use case
+  </Card>
+  <Card title="Check Permissions" icon="lock">
+    Verify socket permissions (0600) for security
+  </Card>
+</CardGroup>
+
+## Integration Examples
+
+### Web Interface
+
+Create a web server that controls Neru:
+
+```javascript
+// Express.js example
+const express = require('express');
+const NeruClient = require('./neru-client');
+
+const app = express();
+const neru = new NeruClient();
+
+app.post('/api/hints', async (req, res) => {
+  try {
+    const response = await neru.sendCommand('hints', ['left_click']);
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/status', async (req, res) => {
+  try {
+    const response = await neru.sendCommand('status');
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(3000);
+```
+
+### Desktop Application
+
+Integrate Neru into a GUI application:
+
+```python
+import tkinter as tk
+from neru_client import NeruClient
+
+class NeruGUI:
+    def __init__(self, root):
+        self.client = NeruClient()
+        self.root = root
+        
+        # Hints button
+        tk.Button(root, text="Hints Mode", 
+                  command=self.activate_hints).pack()
+        
+        # Grid button
+        tk.Button(root, text="Grid Mode", 
+                  command=self.activate_grid).pack()
+        
+        # Status label
+        self.status_label = tk.Label(root, text="")
+        self.status_label.pack()
+        
+        self.update_status()
+    
+    def activate_hints(self):
+        response = self.client.send_command("hints")
+        self.update_status()
+    
+    def activate_grid(self):
+        response = self.client.send_command("grid")
+        self.update_status()
+    
+    def update_status(self):
+        response = self.client.send_command("status")
+        if response["success"]:
+            data = response["data"]
+            status_text = f"Status: {data['enabled']} | Mode: {data['mode']}"
+            self.status_label.config(text=status_text)
+
+root = tk.Tk()
+app = NeruGUI(root)
+root.mainloop()
+```
+
+## Debugging
+
+### Enable IPC Logging
+
+The daemon logs all IPC activity with trace IDs:
+
+```bash
+tail -f ~/Library/Logs/neru/app.log | grep IPC
+```
+
+### Test Socket Connection
+
+```bash
+# Check if socket exists
+ls -la $(find $TMPDIR -name 'neru.sock' 2>/dev/null)
+
+# Test connection with nc
+echo '{"action":"ping"}' | nc -U $(find $TMPDIR -name 'neru.sock' 2>/dev/null)
+```
+
+### Monitor IPC Traffic
+
+```bash
+# Watch socket activity (requires sudo)
+sudo dtruss -t read,write -p $(pgrep neru)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Reference" icon="terminal" href="/advanced/cli-usage">
+    Complete CLI command reference
+  </Card>
+  <Card title="Scripting Guide" icon="code" href="/advanced/scripting">
+    Shell scripting and automation examples
+  </Card>
+</CardGroup>

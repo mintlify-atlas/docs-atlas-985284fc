@@ -1,0 +1,247 @@
+---
+title: "Navigation Modes Overview"
+description: "Understand Neru's three navigation modes and when to use each one"
+---
+
+## Introduction
+
+Neru provides **three distinct navigation modes** that let you control your cursor using only your keyboard. Each mode has different strengths, and understanding when to use each one will make you significantly more productive.
+
+<CardGroup cols={3}>
+  <Card title="Recursive Grid" icon="grid" href="/concepts/recursive-grid">
+    Recommended mode. Works everywhere without setup.
+  </Card>
+  <Card title="Grid Mode" icon="table-cells" href="/concepts/grid-mode">
+    Quick coordinate-based navigation for coarse positioning.
+  </Card>
+  <Card title="Hints Mode" icon="hand-pointer" href="/concepts/hints-mode">
+    Labels appear on clickable elements for instant access.
+  </Card>
+</CardGroup>
+
+## Quick Comparison
+
+| Feature | Recursive Grid | Grid Mode | Hints Mode |
+|---------|---------------|-----------|------------|
+| **Works Everywhere** | ✅ Yes | ✅ Yes | ⚠️ Requires accessibility |
+| **Precision** | ⭐⭐⭐⭐⭐ Highest | ⭐⭐⭐ Medium | ⭐⭐⭐⭐ High |
+| **Speed (Coarse)** | ⭐⭐⭐ Medium | ⭐⭐⭐⭐⭐ Fastest | ⭐⭐⭐⭐ Fast |
+| **Speed (Precise)** | ⭐⭐⭐⭐⭐ Fastest | ⭐⭐ Slow | ⭐⭐⭐⭐ Fast |
+| **App Compatibility** | 100% | 100% | ~85% |
+| **Setup Required** | None | None | Some apps need config |
+| **Best For** | Daily driver | Quick jumps | Button clicking |
+
+## Mode Activation
+
+### Default Hotkeys
+
+| Hotkey | Mode | Description |
+|--------|------|-------------|
+| `Cmd+Shift+C` | **Recursive Grid** | Subdivide screen with `u`/`i`/`j`/`k` |
+| `Cmd+Shift+G` | **Grid** | Direct coordinate selection |
+| `Cmd+Shift+Space` | **Hints** | Label clickable elements |
+| `Cmd+Shift+S` | **Scroll** | Vim-style scrolling |
+
+<Note>
+  All hotkeys are fully remappable in your [configuration file](/guides/hotkeys).
+</Note>
+
+### CLI Activation
+
+You can also activate modes via the command line:
+
+```bash
+# Activate modes
+neru recursive_grid
+neru grid
+neru hints
+neru scroll
+
+# Activate with automatic action
+neru hints --action left_click
+neru grid --action right_click
+```
+
+## When to Use Each Mode
+
+### Use Recursive Grid When...
+
+<Check>You want **maximum precision** anywhere on screen</Check>
+<Check>You're navigating in **apps without accessibility support**</Check>
+<Check>You need **muscle memory** — same keys work everywhere</Check>
+<Check>You're clicking **canvas-based UI** (Figma, games, graphics apps)</Check>
+
+**Example use cases:**
+- Clicking specific pixels in design tools
+- Navigating system UI (menubar, dock, notification center)
+- Games and apps with custom UI frameworks
+- Any situation where hints mode fails
+
+### Use Grid Mode When...
+
+<Check>You need **quick coarse navigation** to a general area</Check>
+<Check>You want to **jump to a screen region fast** with 2-3 keystrokes</Check>
+<Check>You're using it with **scroll mode** to navigate documents</Check>
+
+**Example use cases:**
+- Jumping to different windows on a large monitor
+- Quickly switching between sections of a dashboard
+- Positioning cursor before using scroll mode
+
+### Use Hints Mode When...
+
+<Check>You're clicking **buttons, links, or form elements**</Check>
+<Check>The app has **good accessibility support**</Check>
+<Check>You want to **see all clickable elements at once**</Check>
+<Check>You're navigating **web browsers** or standard macOS apps</Check>
+
+**Example use cases:**
+- Clicking buttons in dialogs
+- Following links in web browsers
+- Selecting items from menus
+- Filling out forms
+
+<Warning>
+  Hints mode requires apps to expose their UI via macOS accessibility APIs. Some apps (especially Electron apps and games) may need additional configuration or may not work at all.
+</Warning>
+
+## Switching Between Modes
+
+You can seamlessly switch between modes without exiting to idle:
+
+```bash
+# While in any mode, press its hotkey again
+Cmd+Shift+C  # Switch to recursive grid
+Cmd+Shift+G  # Switch to grid
+Cmd+Shift+Space  # Switch to hints
+```
+
+Or use the CLI:
+
+```bash
+neru recursive_grid  # Switch to recursive grid from any mode
+```
+
+<Info>
+  Switching modes automatically exits the current mode and activates the new one. Your cursor position is preserved.
+</Info>
+
+## Common Workflows
+
+### Workflow 1: Recursive Grid + Direct Actions
+
+**Recommended for most users**
+
+1. Press `Cmd+Shift+C` to activate recursive grid
+2. Press `u`/`i`/`j`/`k` to narrow selection
+3. Press `Shift+L` to left-click at the selected position
+4. Mode exits automatically, ready for next action
+
+### Workflow 2: Grid + Scroll
+
+**Great for document navigation**
+
+1. Press `Cmd+Shift+G` to jump to document area
+2. Type grid coordinates (e.g., `mf`)
+3. Press `Cmd+Shift+S` to enter scroll mode
+4. Use `j`/`k` to scroll through content
+
+### Workflow 3: Hints for UI + Grid for Everything Else
+
+**Balanced approach**
+
+- Use hints mode in apps with good accessibility (browsers, native apps)
+- Fall back to recursive grid when hints don't appear or app isn't supported
+
+## Direct Actions in Any Mode
+
+All navigation modes support **direct action keys** that let you perform mouse actions without exiting the mode:
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `Shift+L` | Left Click | Click at current position |
+| `Shift+R` | Right Click | Context menu at current position |
+| `Shift+M` | Middle Click | Middle mouse button |
+| `Shift+I` | Mouse Down | Press and hold (for dragging) |
+| `Shift+U` | Mouse Up | Release mouse button |
+| `↑↓←→` | Nudge | Fine-tune cursor position |
+
+<Tip>
+  Direct actions are **fully configurable** in `[action.key_bindings]`. Change them to match your workflow!
+</Tip>
+
+## Exit Keys
+
+By default, press `Escape` to exit any mode. You can add additional exit keys in your config:
+
+```toml
+[general]
+mode_exit_keys = ["Escape", "q"]  # Add 'q' as exit key
+
+# Per-mode exit keys (merged with general.mode_exit_keys)
+[hints]
+mode_exit_keys = ["Ctrl+C"]  # Additional exit key for hints mode only
+```
+
+## Performance Considerations
+
+### Recursive Grid & Grid Mode
+
+- **Zero latency** — no network or API calls
+- **Works offline** — purely coordinate-based
+- **CPU efficient** — minimal resource usage
+- **Pre-warmed** — first activation is instant (when `prewarm_enabled = true`)
+
+### Hints Mode
+
+- **Requires accessibility queries** — slight delay on activation (~100-500ms)
+- **Per-app performance varies** — depends on accessibility tree complexity
+- **Dynamic content** — may need refresh when UI changes
+- **Can be optimized** — use `max_depth` and `parallel_threshold` settings
+
+## Recommended Setup
+
+For most users, we recommend:
+
+<Steps>
+  <Step title="Set Recursive Grid as your primary mode">
+    Use `Cmd+Shift+C` for most navigation tasks. It works everywhere and becomes muscle memory quickly.
+  </Step>
+  
+  <Step title="Keep Hints mode as a quick alternative">
+    Use `Cmd+Shift+Space` in apps where you want to see all clickable elements at once.
+  </Step>
+  
+  <Step title="Enable auto-exit for one-shot actions">
+    Configure `auto_exit_actions` so modes exit after clicking:
+    
+    ```toml
+    [recursive_grid]
+    auto_exit_actions = ["left_click", "right_click"]
+    
+    [hints]
+    auto_exit_actions = ["left_click", "right_click"]
+    ```
+  </Step>
+  
+  <Step title="Learn the direct action keys">
+    Master `Shift+L` (left click) and `Shift+R` (right click) — they work in all modes.
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Recursive Grid Deep Dive" icon="grid" href="/concepts/recursive-grid">
+    Learn how recursive grid subdivision works
+  </Card>
+  <Card title="Grid Mode Guide" icon="table-cells" href="/concepts/grid-mode">
+    Master coordinate-based navigation
+  </Card>
+  <Card title="Hints Mode Setup" icon="hand-pointer" href="/concepts/hints-mode">
+    Configure hints for your apps
+  </Card>
+  <Card title="Scroll Mode" icon="scroll" href="/concepts/scroll-mode">
+    Vim-style scrolling anywhere
+  </Card>
+</CardGroup>

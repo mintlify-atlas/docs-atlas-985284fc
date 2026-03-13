@@ -1,80 +1,314 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with Neru in 5 minutes
 ---
 
-## Get started in three steps
+<Note>
+  **Prerequisites:** Make sure you've [installed Neru](/installation) and granted accessibility permissions.
+</Note>
 
-Get your documentation site running locally and make your first customization.
+## Launch Neru
 
-### Step 1: Set up your local environment
+First, start the Neru daemon:
+
+<CodeGroup>
+```bash App Bundle
+open -a Neru
+```
+
+```bash CLI
+neru launch
+```
+</CodeGroup>
+
+Verify Neru is running:
+
+```bash
+neru status
+# Output: Status: running
+```
+
+## Default Hotkeys
+
+Neru comes with these default hotkeys out of the box:
+
+| Hotkey | Action | Description |
+| ------ | ------ | ----------- |
+| `Cmd+Shift+C` | **Recursive Grid** | Recommended for daily use |
+| `Cmd+Shift+G` | Grid | Quick coordinate navigation |
+| `Cmd+Shift+Space` | Hints | Click UI elements |
+| `Cmd+Shift+S` | Scroll | Vim-style scrolling |
+
+<Tip>
+  All hotkeys are fully customizable in your config file. See the [Configuration Guide](/guides/configuration) for details.
+</Tip>
+
+## Try Each Navigation Mode
+
+<Steps>
+  <Step title="Recursive Grid (Recommended)">
+    Press `Cmd+Shift+C` to activate recursive grid mode.
+
+    <Frame>
+      <img src="https://github.com/user-attachments/assets/0d46fa7c-345a-45ee-ad44-7a601c2b7cb1" alt="Recursive Grid Mode" />
+    </Frame>
+
+    **How it works:**
+    1. Your screen divides into a 2×2 grid labeled with keys: `u` (upper-left), `i` (upper-right), `j` (lower-left), `k` (lower-right)
+    2. Press a key to narrow to that region
+    3. The selected region divides again with the same keys
+    4. Repeat until you reach your target
+
+    **Try it:**
+    ```
+    1. Press Cmd+Shift+C
+    2. Press 'u' to select upper-left quadrant
+    3. Press 'i' to select upper-right of that quadrant
+    4. Continue until cursor is where you want
+    5. Press Shift+L to left-click (or configure auto-click)
+    6. Press Esc to exit
+    ```
+
+    **Useful keys while in mode:**
+    - `Backspace` - Go up one level (undo last selection)
+    - `Space` - Reset to initial center
+    - `Shift+L` - Left click at current position
+    - `Shift+R` - Right click at current position
+    - `Arrow keys` - Fine-tune cursor position
+    - `Esc` - Exit mode
+
+    <Info>
+      Recursive Grid is recommended as your daily driver because it works everywhere with no app-specific setup.
+    </Info>
+  </Step>
+
+  <Step title="Grid Mode">
+    Press `Cmd+Shift+G` to activate grid mode.
+
+    <Frame>
+      <img src="https://github.com/user-attachments/assets/d452f972-ce23-4798-955b-6dbfa8435504" alt="Grid Mode" />
+    </Frame>
+
+    **How it works:**
+    1. Your screen is divided into a coordinate grid
+    2. Each cell is labeled with two characters (row + column)
+    3. Type the two-character code to jump to that position
+
+    **Try it:**
+    ```
+    1. Press Cmd+Shift+G
+    2. Type a two-letter coordinate (e.g., "ab")
+    3. Grid narrows to a 3×3 subgrid
+    4. Type another two letters to pinpoint location
+    5. Press Shift+L to left-click
+    6. Press Esc to exit
+    ```
+
+    **Useful keys while in mode:**
+    - `Space` - Clear input and start over
+    - `Backspace` - Delete last character
+    - `Shift+L` - Left click
+    - `Arrow keys` - Fine-tune cursor position
+    - `Esc` - Exit mode
+  </Step>
+
+  <Step title="Hints Mode">
+    Press `Cmd+Shift+Space` to activate hints mode.
+
+    <Frame>
+      <img src="https://github.com/user-attachments/assets/71b13850-1b87-40b5-9ac0-93cff1f2e89b" alt="Hints Mode" />
+    </Frame>
+
+    **How it works:**
+    1. Neru scans the current window for clickable elements
+    2. Each element gets a short label (e.g., "aa", "as", "df")
+    3. Type the label to click that element
+
+    **Try it:**
+    ```
+    1. Open Safari or any app with buttons/links
+    2. Press Cmd+Shift+Space
+    3. You'll see labels appear on clickable elements
+    4. Type a label (e.g., "aa") to click that element
+    5. The element is clicked automatically
+    ```
+
+    **Useful keys while in mode:**
+    - `Backspace` - Delete last typed character
+    - `Shift+L` - Left click at cursor position
+    - `Shift+R` - Right click at cursor position
+    - `Arrow keys` - Move cursor
+    - `Esc` - Exit mode
+
+    <Warning>
+      Hints mode requires apps to expose accessibility information. It works great in browsers, Electron apps, and native macOS apps. Some apps may need additional configuration.
+    </Warning>
+  </Step>
+
+  <Step title="Scroll Mode">
+    Press `Cmd+Shift+S` to activate scroll mode.
+
+    **How it works:**
+    - Vim-style scrolling at the current cursor position
+    - No overlay — just keyboard scrolling
+
+    **Try it:**
+    ```
+    1. Open a long webpage or document
+    2. Press Cmd+Shift+S
+    3. Use these keys to scroll:
+       - j / k - Scroll down/up (one line)
+       - h / l - Scroll left/right
+       - Ctrl+D / Ctrl+U - Half-page down/up
+       - gg - Jump to top
+       - Shift+G - Jump to bottom
+    4. Press Esc to exit
+    ```
+
+    <Tip>
+      All scroll keys are fully remappable in your config file.
+    </Tip>
+  </Step>
+</Steps>
+
+## Direct Mouse Actions
+
+While in any navigation mode, you can perform mouse actions without exiting:
+
+| Action | Default Key | Description |
+| ------ | ----------- | ----------- |
+| Left click | `Shift+L` | Click at cursor position |
+| Right click | `Shift+R` | Right-click at cursor |
+| Middle click | `Shift+M` | Middle-click at cursor |
+| Move up | `↑` | Nudge cursor up 10px |
+| Move down | `↓` | Nudge cursor down 10px |
+| Move left | `←` | Nudge cursor left 10px |
+| Move right | `→` | Nudge cursor right 10px |
+| Mouse down | `Shift+I` | Press and hold |
+| Mouse up | `Shift+U` | Release button |
+
+## Common Workflows
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="Quick click on a button">
+    1. Press `Cmd+Shift+Space` (Hints)
+    2. Type the label on the button
+    3. Done — it's clicked automatically
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion title="Navigate to precise screen location">
+    1. Press `Cmd+Shift+C` (Recursive Grid)
+    2. Press `u`/`i`/`j`/`k` to narrow down
+    3. Use arrow keys for final adjustment
+    4. Press `Shift+L` to click
+  </Accordion>
+
+  <Accordion title="Scroll through a long document">
+    1. Press `Cmd+Shift+S` (Scroll)
+    2. Use `j`/`k` to scroll
+    3. Use `gg` or `Shift+G` to jump to top/bottom
+    4. Press `Esc` when done
+  </Accordion>
+
+  <Accordion title="Right-click for context menu">
+    1. Enter any navigation mode
+    2. Navigate to target location
+    3. Press `Shift+R` for right-click
+    4. Use hints mode to select menu item
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Auto-Click Configuration
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Want to skip pressing `Shift+L` after navigation? Configure auto-click in your config file:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```toml ~/.config/neru/config.toml
+[hints]
+auto_exit_actions = ["left_click"]
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+[grid]
+auto_exit_actions = ["left_click"]
 
-### Step 3: Go live
+[recursive_grid]
+auto_exit_actions = ["left_click"]
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Or use the `--action` flag when activating via CLI:
 
-## Next steps
+```bash
+neru hints --action left_click
+neru grid --action left_click
+neru recursive_grid --action left_click
+```
 
-Now that you have your docs running, explore these key features:
+Reload config to apply changes:
+
+```bash
+neru config reload
+```
+
+## CLI Usage
+
+You can also activate modes via the command line:
+
+<CodeGroup>
+```bash Hints
+neru hints
+neru hints --action right_click
+```
+
+```bash Grid
+neru grid
+neru grid --action left_click
+```
+
+```bash Recursive Grid
+neru recursive_grid
+neru recursive_grid --action left_click
+```
+
+```bash Scroll
+neru scroll
+```
+
+```bash Actions
+neru action left_click
+neru action right_click
+neru action move_mouse --x 500 --y 300
+neru action move_mouse --center
+```
+</CodeGroup>
+
+## Tips for Success
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Start with Recursive Grid" icon="grid">
+    It's the most versatile mode and works everywhere without configuration.
+  </Card>
+  <Card title="Learn the Keys" icon="keyboard">
+    Spend 5 minutes practicing `u`/`i`/`j`/`k` in recursive grid. Muscle memory forms quickly.
+  </Card>
+  <Card title="Customize Hotkeys" icon="sliders">
+    Change hotkeys to match your preferences. See the [Configuration Guide](/guides/configuration).
+  </Card>
+  <Card title="Use Hints for Buttons" icon="hand-pointer">
+    Hints mode is perfect for clicking buttons in web apps and dialog boxes.
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" icon="gear" href="/guides/configuration">
+    Customize hotkeys, colors, fonts, and behavior
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli">
+    Learn about all CLI commands and scripting
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting">
+    Common issues and app-specific fixes
+  </Card>
+  <Card title="GitHub Discussions" icon="comments" href="https://github.com/y3owk1n/neru/discussions">
+    Share your config and get help from the community
+  </Card>
+</CardGroup>

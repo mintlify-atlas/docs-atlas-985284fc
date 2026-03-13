@@ -1,0 +1,345 @@
+---
+title: Daemon Control
+description: Commands for controlling the Neru daemon lifecycle
+icon: power-off
+---
+
+The Neru daemon is the background process that handles all navigation and accessibility features. These commands control its lifecycle.
+
+## Overview
+
+The CLI communicates with the daemon via IPC (Inter-Process Communication) using Unix domain sockets. This enables:
+
+- Fast, reliable communication
+- Multiple concurrent CLI commands
+- Proper error handling
+- Scriptable workflows
+
+<Note>
+  Most commands require a running daemon instance. Use `neru launch` or `neru` to start the daemon first.
+</Note>
+
+---
+
+## neru launch
+
+Start the Neru daemon process.
+
+```bash
+neru launch
+```
+
+### Options
+
+<ParamField path="--config" type="string" default="">
+  Path to custom config file. Can also use `-c` shorthand.
+  
+  ```bash
+  neru launch --config /path/to/config.toml
+  neru launch -c ./configs/custom.toml
+  ```
+</ParamField>
+
+<ParamField path="--timeout" type="integer" default="5">
+  IPC timeout in seconds. Applies to all daemon communication.
+  
+  ```bash
+  neru launch --timeout 10
+  ```
+</ParamField>
+
+### Behavior
+
+- Checks if daemon is already running before launching
+- If already running, prints message and exits
+- Loads configuration from specified path or default location
+- Starts the daemon process in the background
+
+### Examples
+
+<CodeGroup>
+```bash Basic launch
+neru launch
+```
+
+```bash Custom config
+neru launch --config ~/.config/neru/custom.toml
+```
+
+```bash With timeout
+neru launch --timeout 10
+```
+</CodeGroup>
+
+---
+
+## neru start
+
+Resume the daemon if it was previously paused with `neru stop`.
+
+```bash
+neru start
+```
+
+### Description
+
+Enables Neru functionality after being disabled. The daemon continues running in the background - this command simply reactivates it.
+
+### Requirements
+
+<Warning>
+  Requires daemon to be running. Start it first with `neru launch`.
+</Warning>
+
+### Use Cases
+
+- Resume after temporary disable
+- Re-enable after system sleep/wake
+- Restart functionality without full daemon restart
+
+---
+
+## neru stop
+
+Pause the daemon without quitting the process.
+
+```bash
+neru stop
+```
+
+### Description
+
+Disables Neru functionality but keeps the daemon running in the background. This is useful for temporary disable without losing the daemon process.
+
+### Requirements
+
+<Warning>
+  Requires daemon to be running.
+</Warning>
+
+### Use Cases
+
+- Temporary disable during presentations
+- Quick pause for conflicting application
+- Disable without losing process state
+
+### Note
+
+<Info>
+  Use `stop` for temporary disable. Use `idle` to cancel active navigation modes.
+</Info>
+
+---
+
+## neru idle
+
+Cancel the current navigation mode and return to idle state.
+
+```bash
+neru idle
+```
+
+### Description
+
+Exits the current active mode (hints, grid, recursive_grid, scroll) and returns to idle state. The daemon remains enabled and running.
+
+### Requirements
+
+<Warning>
+  Requires daemon to be running.
+</Warning>
+
+### Use Cases
+
+- Cancel active hint mode
+- Exit grid navigation
+- Cancel scroll mode
+- Return to idle from any active mode
+
+### Mode States
+
+- **idle** - No active navigation mode
+- **hints** - Hint mode active
+- **grid** - Grid mode active
+- **recursive_grid** - Recursive grid mode active
+- **scroll** - Scroll mode active
+
+---
+
+## neru status
+
+Display the current status of the Neru daemon.
+
+```bash
+neru status
+```
+
+### Description
+
+Shows the current operational state and active mode of the daemon.
+
+### Requirements
+
+<Warning>
+  Requires daemon to be running.
+</Warning>
+
+### Output Format
+
+The status command returns:
+
+- **Status**: `running` or `disabled`
+- **Mode**: Current navigation mode (see Mode States below)
+
+### Status Values
+
+| Value | Description |
+|-------|-------------|
+| `running` | Daemon is active and processing commands |
+| `disabled` | Daemon is paused (via `neru stop`) |
+
+### Mode Values
+
+| Value | Description |
+|-------|-------------|
+| `idle` | No active navigation mode |
+| `hints` | Hint mode is active |
+| `grid` | Grid mode is active |
+| `recursive_grid` | Recursive grid mode is active |
+| `scroll` | Scroll mode is active |
+
+### Examples
+
+<CodeGroup>
+```bash Check status
+neru status
+# Output:
+# Status: running
+# Mode: idle
+```
+
+```bash Status in scripts
+#!/bin/bash
+STATUS=$(neru status | grep "Status:" | awk '{print $2}')
+if [ "$STATUS" = "running" ]; then
+    echo "Neru is active"
+else
+    echo "Neru is paused"
+fi
+```
+
+```bash Quick check
+neru status &>/dev/null && echo "Running" || echo "Not running"
+```
+</CodeGroup>
+
+---
+
+## Scripting Examples
+
+### Toggle Script
+
+Create a toggle script to switch between running and stopped states:
+
+```bash toggle-neru.sh
+#!/bin/bash
+STATUS=$(neru status | grep "Status:" | awk '{print $2}')
+if [ "$STATUS" = "running" ]; then
+    neru stop
+    echo "Neru stopped"
+else
+    neru start
+    echo "Neru started"
+fi
+```
+
+### External Hotkey Manager (skhd)
+
+Integrate with external hotkey managers:
+
+```bash ~/.config/skhd/skhdrc
+# Toggle Neru on/off
+ctrl + shift - n : ~/scripts/toggle-neru.sh
+
+# Launch hints mode
+ctrl - f : neru hints
+
+# Launch grid mode
+ctrl - g : neru grid
+
+# Cancel current mode
+esc : neru idle
+```
+
+### Health Check Script
+
+```bash health-check.sh
+#!/bin/bash
+if ! neru status &>/dev/null; then
+    echo "Daemon not running, starting..."
+    neru launch
+else
+    echo "Daemon is running"
+    neru status
+fi
+```
+
+---
+
+## Troubleshooting
+
+### Command Hangs
+
+If a command hangs, the daemon may be stuck:
+
+```bash
+# Force quit daemon
+pkill -9 neru
+
+# Restart
+neru launch
+```
+
+### Socket Permission Errors
+
+If you get permission errors on the IPC socket:
+
+```bash
+# Remove stale socket (path typically under /var/folders/.../T)
+rm -f /var/folders/*/*/T/neru.sock
+
+# Restart daemon
+neru launch
+```
+
+### Already Running Error
+
+If `neru launch` reports daemon is already running:
+
+```bash
+# Check if actually running
+neru status
+
+# If status fails, clean up stale socket
+rm -f /var/folders/*/*/T/neru.sock
+neru launch
+```
+
+---
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Navigation Commands" icon="compass" href="/cli/navigation">
+    Control navigation modes (hints, grid, recursive_grid, scroll)
+  </Card>
+  <Card title="Action Commands" icon="hand-pointer" href="/cli/actions">
+    Perform immediate mouse actions (click, move)
+  </Card>
+  <Card title="Service Management" icon="gear" href="/cli/services">
+    Install and manage system service for auto-start
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/cli/config">
+    Reload and dump configuration
+  </Card>
+</CardGroup>

@@ -1,0 +1,558 @@
+---
+title: "Scripting & Automation"
+description: "Automate Neru workflows with shell scripts and external tools"
+---
+
+## Overview
+
+Neru's CLI is designed for scripting and automation. All commands can be chained, combined, and integrated with external tools like hotkey daemons, window managers, and task automation systems.
+
+<Card title="Why Script Neru?" icon="wand-magic-sparkles">
+  - Automate repetitive navigation tasks
+  - Integrate with external hotkey managers (skhd, BetterTouchTool)
+  - Build custom workflows for specific applications
+  - Create context-aware navigation shortcuts
+  - Combine with other CLI tools for powerful automation
+</Card>
+
+## Shell Integration
+
+### Bash Integration
+
+Add Neru functions to your `~/.bashrc` or `~/.bash_profile`:
+
+```bash
+# Toggle Neru on/off
+neru_toggle() {
+    STATUS=$(neru status | grep "Status:" | awk '{print $2}')
+    if [ "$STATUS" = "running" ]; then
+        neru stop
+        echo "Neru stopped"
+    else
+        neru start
+        echo "Neru started"
+    fi
+}
+
+# Quick hint navigation with action
+neru_hint_click() {
+    neru hints --action "${1:-left_click}"
+}
+
+# Quick grid navigation
+neru_grid_click() {
+    neru grid --action "${1:-left_click}"
+}
+
+# Check if Neru is running
+neru_is_running() {
+    neru status &>/dev/null && return 0 || return 1
+}
+```
+
+Usage:
+
+```bash
+neru_toggle              # Toggle Neru on/off
+neru_hint_click          # Hints mode with left click
+neru_hint_click right    # Hints mode with right click
+neru_is_running && echo "Neru is active"
+```
+
+### Zsh Integration
+
+Add to your `~/.zshrc`:
+
+```zsh
+# Neru helper functions
+function neru-toggle() {
+    local status=$(neru status 2>/dev/null | grep "Status:" | awk '{print $2}')
+    if [[ "$status" == "running" ]]; then
+        neru stop
+        print "✋ Neru stopped"
+    else
+        neru start
+        print "🚀 Neru started"
+    fi
+}
+
+# Smart hint mode - starts daemon if needed
+function neru-hint() {
+    if ! neru status &>/dev/null; then
+        print "Starting Neru..."
+        neru launch
+        sleep 1
+    fi
+    neru hints --action "${1:-left_click}"
+}
+
+# Get current Neru mode
+function neru-mode() {
+    neru status 2>/dev/null | grep "Mode:" | awk '{print $2}'
+}
+
+# Quick status check
+function neru-check() {
+    local status=$(neru status 2>/dev/null | grep "Status:" | awk '{print $2}')
+    local mode=$(neru status 2>/dev/null | grep "Mode:" | awk '{print $2}')
+    print "Status: $status | Mode: $mode"
+}
+```
+
+With Oh My Zsh:
+
+```zsh
+# Add to plugins
+plugins=(... neru)
+
+# Create ~/.oh-my-zsh/custom/plugins/neru/neru.plugin.zsh
+alias nh='neru hints'
+alias ng='neru grid'
+alias ns='neru scroll'
+alias nst='neru status'
+alias nr='neru config reload'
+
+# Completion
+compdef _neru neru
+```
+
+## External Hotkey Integration
+
+### skhd (macOS)
+
+[skhd](https://github.com/koekeishiya/skhd) is a popular hotkey daemon for macOS. Add to `~/.config/skhd/skhdrc`:
+
+```bash
+# Navigation modes
+ctrl - f : neru hints
+ctrl - g : neru grid
+ctrl - r : neru recursive_grid
+ctrl - s : neru scroll
+
+# Hints with actions
+ctrl + alt - f : neru hints --action left_click
+ctrl + alt - r : neru hints --action right_click
+ctrl + alt - m : neru hints --action middle_click
+
+# Grid with actions
+ctrl + alt - g : neru grid --action left_click
+
+# Immediate actions
+ctrl + cmd - 1 : neru action left_click
+ctrl + cmd - 2 : neru action right_click
+ctrl + cmd - 3 : neru action middle_click
+
+# Daemon control
+ctrl + cmd - n : neru launch
+ctrl + cmd - x : neru stop
+ctrl + cmd - i : neru idle
+
+# Mouse movement
+ctrl + cmd - c : neru action move_mouse --center
+ctrl + cmd - up : neru action move_mouse_relative --dx 0 --dy -50
+ctrl + cmd - down : neru action move_mouse_relative --dx 0 --dy 50
+ctrl + cmd - left : neru action move_mouse_relative --dx -50 --dy 0
+ctrl + cmd - right : neru action move_mouse_relative --dx 50 --dy 0
+
+# Screen sharing toggle
+ctrl + cmd - t : neru toggle-screen-share
+```
+
+### Hammerspoon (macOS)
+
+[Hammerspoon](https://www.hammerspoon.org/) allows Lua scripting for macOS automation:
+
+```lua
+-- ~/.hammerspoon/init.lua
+
+-- Helper function to run Neru commands
+local function neru(cmd)
+    hs.task.new("/usr/local/bin/neru", nil, function(exitCode, stdOut, stdErr)
+        if exitCode ~= 0 then
+            hs.notify.new({title="Neru", informativeText="Command failed: " .. cmd}):send()
+        end
+    end, cmd:split(" ")):start()
+end
+
+-- Navigation hotkeys
+hs.hotkey.bind({"ctrl"}, "f", function()
+    neru("hints")
+end)
+
+hs.hotkey.bind({"ctrl"}, "g", function()
+    neru("grid")
+end)
+
+hs.hotkey.bind({"ctrl", "alt"}, "f", function()
+    neru("hints --action left_click")
+end)
+
+-- Toggle Neru
+hs.hotkey.bind({"ctrl", "cmd"}, "n", function()
+    local handle = io.popen("neru status 2>/dev/null | grep 'Status:' | awk '{print $2}'")
+    local status = handle:read("*a"):gsub("%s+", "")
+    handle:close()
+    
+    if status == "running" then
+        neru("stop")
+        hs.notify.new({title="Neru", informativeText="Stopped"}):send()
+    else
+        neru("start")
+        hs.notify.new({title="Neru", informativeText="Started"}):send()
+    end
+end)
+
+-- String split helper
+function string:split(sep)
+    local sep, fields = sep or ":", {}
+    local pattern = string.format("([^%s]+)", sep)
+    self:gsub(pattern, function(c) fields[#fields+1] = c end)
+    return fields
+end
+```
+
+### BetterTouchTool (macOS)
+
+Create keyboard shortcuts in BetterTouchTool:
+
+1. Open BetterTouchTool Preferences
+2. Go to "Keyboard" tab
+3. Add new shortcut
+4. Set trigger (e.g., `Ctrl+F`)
+5. Add action: "Execute Terminal Command (Synchronous, Non-Blocking)"
+6. Enter command: `/usr/local/bin/neru hints`
+
+<Tip>
+  Use the full path to the `neru` binary. Find it with `which neru`.
+</Tip>
+
+## Automation Scripts
+
+### Auto-start on Login
+
+```bash
+#!/bin/bash
+# ~/scripts/neru-autostart.sh
+
+# Wait for system to be ready
+sleep 5
+
+# Check if Neru is already running
+if ! neru status &>/dev/null; then
+    # Start Neru with custom config
+    neru launch --config ~/.config/neru/config.toml
+    
+    # Log startup
+    echo "$(date): Neru started" >> ~/Library/Logs/neru/autostart.log
+fi
+```
+
+Make it executable:
+
+```bash
+chmod +x ~/scripts/neru-autostart.sh
+```
+
+Add to launchd or use `neru services install`.
+
+### Context-Aware Navigation
+
+```bash
+#!/bin/bash
+# Smart navigation based on active application
+
+ACTIVE_APP=$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true')
+
+case "$ACTIVE_APP" in
+    "Finder")
+        # Use grid mode for Finder (better for icons)
+        neru grid --action left_click
+        ;;
+    "Safari"|"Google Chrome"|"Firefox")
+        # Use hints mode for browsers (better for links)
+        neru hints --action left_click
+        ;;
+    "Visual Studio Code"|"Xcode")
+        # Use recursive grid for code editors (precise positioning)
+        neru recursive_grid
+        ;;
+    *)
+        # Default to hints mode
+        neru hints
+        ;;
+esac
+```
+
+### Smart Click Helper
+
+```bash
+#!/bin/bash
+# ~/scripts/smart-click.sh
+# Automatically chooses best navigation mode
+
+ACTION="${1:-left_click}"
+
+# Ensure Neru is running
+if ! neru status &>/dev/null; then
+    echo "Starting Neru..."
+    neru launch
+    sleep 1
+fi
+
+# Try hints mode first (fastest for clickable elements)
+neru hints --action "$ACTION"
+```
+
+### Batch Mouse Movements
+
+```bash
+#!/bin/bash
+# Move mouse through a sequence of positions
+
+MOVEMENTS=(
+    "--x 100 --y 100"
+    "--x 500 --y 300"
+    "--x 800 --y 600"
+)
+
+for movement in "${MOVEMENTS[@]}"; do
+    neru action move_mouse $movement
+    sleep 0.5
+    neru action left_click
+    sleep 0.2
+done
+```
+
+## Real-World Use Cases
+
+### Use Case 1: Browser Testing
+
+Automate browser testing with repeated clicks:
+
+```bash
+#!/bin/bash
+# Test a web form by clicking through fields
+
+POSITIONS=("300,100" "300,200" "300,300" "500,400")
+
+for pos in "${POSITIONS[@]}"; do
+    IFS=',' read -r x y <<< "$pos"
+    
+    # Move and click
+    neru action move_mouse --x "$x" --y "$y"
+    sleep 0.3
+    neru action left_click
+    sleep 0.2
+    
+    # Type some text (use external tool)
+    # osascript -e 'tell application "System Events" to keystroke "test"'
+done
+```
+
+### Use Case 2: Screenshot Workflow
+
+```bash
+#!/bin/bash
+# Click through UI elements for documentation screenshots
+
+TARGETS=("File menu" "Edit menu" "View menu")
+
+for target in "${TARGETS[@]}"; do
+    echo "Navigate to: $target"
+    
+    # Use hints to navigate
+    neru hints
+    
+    # Wait for user to select
+    sleep 2
+    
+    # Take screenshot
+    screencapture -w "screenshot_${target// /_}.png"
+    
+    # Reset
+    neru idle
+    sleep 1
+done
+```
+
+### Use Case 3: Accessibility Helper
+
+```bash
+#!/bin/bash
+# Voice command integration
+
+case "$1" in
+    "click")
+        neru hints --action left_click
+        ;;
+    "right click")
+        neru hints --action right_click
+        ;;
+    "scroll")
+        neru scroll
+        ;;
+    "center")
+        neru action move_mouse --center
+        ;;
+    "move up")
+        neru action move_mouse_relative --dx 0 --dy -100
+        ;;
+    "move down")
+        neru action move_mouse_relative --dx 0 --dy 100
+        ;;
+    *)
+        echo "Unknown command: $1"
+        ;;
+esac
+```
+
+## Combining with Other Tools
+
+### With jq (JSON Processing)
+
+```bash
+# Extract specific config values
+neru config dump | jq '.hotkeys.hints'
+
+# Check if hints mode is enabled
+ENABLED=$(neru config dump | jq -r '.hints.enabled')
+if [ "$ENABLED" = "true" ]; then
+    echo "Hints mode is enabled"
+fi
+```
+
+### With watch (Monitoring)
+
+```bash
+# Monitor Neru status
+watch -n 1 'neru status'
+
+# Watch for mode changes
+watch -n 0.5 'neru status | grep Mode'
+```
+
+### With parallel (Concurrent Operations)
+
+```bash
+# Run multiple checks in parallel
+parallel ::: \
+    'neru status' \
+    'neru config dump | jq .hints' \
+    'neru --version'
+```
+
+## Error Handling
+
+### Robust Script Template
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+# Error handler
+error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
+}
+
+# Success message
+success() {
+    echo -e "${GREEN}$1${NC}"
+}
+
+# Check if Neru is running
+if ! neru status &>/dev/null; then
+    error "Neru is not running. Start it with: neru launch"
+fi
+
+# Send command with error handling
+if neru hints --action left_click; then
+    success "Command executed successfully"
+else
+    error "Command failed with exit code $?"
+fi
+```
+
+### Retry Logic
+
+```bash
+#!/bin/bash
+# Retry command with exponential backoff
+
+MAX_RETRIES=3
+RETRY_DELAY=1
+
+for i in $(seq 1 $MAX_RETRIES); do
+    if neru hints; then
+        echo "Success on attempt $i"
+        exit 0
+    fi
+    
+    echo "Attempt $i failed, retrying in ${RETRY_DELAY}s..."
+    sleep $RETRY_DELAY
+    RETRY_DELAY=$((RETRY_DELAY * 2))
+done
+
+echo "Failed after $MAX_RETRIES attempts"
+exit 1
+```
+
+## Performance Tips
+
+<CardGroup cols={2}>
+  <Card title="Use Shorter Timeouts" icon="clock">
+    For scripted workflows, use `--timeout 2` to fail faster
+  </Card>
+  <Card title="Check Status First" icon="circle-check">
+    Always verify daemon is running before sending commands
+  </Card>
+  <Card title="Batch Operations" icon="layer-group">
+    Group related commands to minimize IPC overhead
+  </Card>
+  <Card title="Background Launch" icon="rocket">
+    Launch daemon in background with `neru launch &`
+  </Card>
+</CardGroup>
+
+## Debugging Scripts
+
+### Verbose Mode
+
+```bash
+#!/bin/bash
+# Enable debug output
+set -x  # Print commands
+
+neru status
+neru hints
+```
+
+### Log Output
+
+```bash
+# Log all Neru commands
+LOGFILE=~/neru-script.log
+
+{
+    echo "=== $(date) ==="
+    neru status
+    neru hints --action left_click
+    echo "Exit code: $?"
+} >> "$LOGFILE" 2>&1
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="IPC Automation" icon="network-wired" href="/advanced/ipc-automation">
+    Learn programmatic control via IPC protocol
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/advanced/cli-usage">
+    Complete CLI command reference
+  </Card>
+</CardGroup>

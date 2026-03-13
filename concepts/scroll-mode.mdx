@@ -1,0 +1,454 @@
+---
+title: "Scroll Mode"
+description: "Vim-style scrolling anywhere with fully remappable bindings"
+---
+
+## Overview
+
+Scroll Mode provides **Vim-style keyboard scrolling** at your cursor position. It's designed for reading documents, browsing web pages, and navigating long content without reaching for the mouse or trackpad.
+
+<Check>**Familiar Vim bindings** — `j`/`k`, `gg`/`G`, `Ctrl+D`/`Ctrl+U`</Check>
+<Check>**Works anywhere** — browsers, PDFs, terminals, editors</Check>
+<Check>**Fully remappable** — customize every key to your preference</Check>
+<Check>**Precise control** — configurable step sizes</Check>
+
+## How It Works
+
+<Steps>
+  <Step title="Position cursor where you want to scroll">
+    Use any navigation mode (or your mouse) to position the cursor over the scrollable area.
+  </Step>
+  
+  <Step title="Activate scroll mode">
+    Press `Cmd+Shift+S` (default). The mode indicator appears near your cursor.
+  </Step>
+  
+  <Step title="Use Vim keys to scroll">
+    - `j` — Scroll down
+    - `k` — Scroll up
+    - `h` — Scroll left
+    - `l` — Scroll right
+    - `gg` — Jump to top
+    - `Shift+G` — Jump to bottom
+    - `Ctrl+D` — Half page down
+    - `Ctrl+U` — Half page up
+  </Step>
+  
+  <Step title="Exit when done">
+    Press `Escape` to exit scroll mode.
+  </Step>
+</Steps>
+
+## Default Keybindings
+
+### Line Scrolling
+
+| Key | Action | Step Size |
+|-----|--------|----------|
+| `j` or `Down` | Scroll down | `scroll_step` (default: 50px) |
+| `k` or `Up` | Scroll up | `scroll_step` (default: 50px) |
+| `h` or `Left` | Scroll left | `scroll_step` (default: 50px) |
+| `l` or `Right` | Scroll right | `scroll_step` (default: 50px) |
+
+### Jump Navigation
+
+| Key | Action | Step Size |
+|-----|--------|----------|
+| `gg` | Jump to top | `scroll_step_full` (default: 1000000px) |
+| `Shift+G` | Jump to bottom | `scroll_step_full` (default: 1000000px) |
+
+### Page Scrolling
+
+| Key | Action | Step Size |
+|-----|--------|----------|
+| `Ctrl+D` or `PageDown` | Half page down | `scroll_step_half` (default: 500px) |
+| `Ctrl+U` or `PageUp` | Half page up | `scroll_step_half` (default: 500px) |
+
+### Exit
+
+| Key | Action |
+|-----|--------|
+| `Escape` | Exit scroll mode |
+
+## Configuration
+
+### Basic Setup
+
+```toml
+[scroll]
+# Scroll step sizes (in pixels)
+scroll_step = 50        # j/k/h/l: one line
+scroll_step_half = 500  # Ctrl+D/U: half page
+scroll_step_full = 1000000  # gg/G: jump to top/bottom
+
+# Additional exit keys (merged with general.mode_exit_keys)
+mode_exit_keys = []
+```
+
+### Custom Keybindings
+
+Fully customize all scroll keys:
+
+```toml
+[scroll.key_bindings]
+# Basic movement (can have multiple keys per action)
+scroll_up = ["k", "Up"]
+scroll_down = ["j", "Down"]
+scroll_left = ["h", "Left"]
+scroll_right = ["l", "Right"]
+
+# Jump to position
+go_top = ["gg", "Cmd+Up"]
+go_bottom = ["Shift+G", "Cmd+Down"]
+
+# Page movement
+page_up = ["Ctrl+U", "PageUp"]
+page_down = ["Ctrl+D", "PageDown"]
+```
+
+<Note>
+  Each action accepts **an array of keys**, so you can have multiple bindings for the same action.
+</Note>
+
+### Step Size Tuning
+
+#### Fine Control (Small Steps)
+
+```toml
+[scroll]
+scroll_step = 20        # Slower, more precise scrolling
+scroll_step_half = 200  # Smaller page jumps
+```
+
+**Use for:**
+- Reading dense text (books, articles)
+- Fine-grained document navigation
+- Terminal scrollback
+
+#### Fast Scrolling (Large Steps)
+
+```toml
+[scroll]
+scroll_step = 100       # Faster line scrolling
+scroll_step_half = 800  # Larger page jumps
+```
+
+**Use for:**
+- Quickly scanning long documents
+- Browsing social media feeds
+- Navigating large datasets
+
+### Alternative Key Layouts
+
+#### Arrow Keys Only
+
+```toml
+[scroll.key_bindings]
+scroll_up = ["Up"]
+scroll_down = ["Down"]
+scroll_left = ["Left"]
+scroll_right = ["Right"]
+go_top = ["Home"]
+go_bottom = ["End"]
+page_up = ["PageUp"]
+page_down = ["PageDown"]
+```
+
+#### Mac-Style
+
+```toml
+[scroll.key_bindings]
+scroll_up = ["k", "Up"]
+scroll_down = ["j", "Down"]
+go_top = ["Cmd+Up", "Home"]
+go_bottom = ["Cmd+Down", "End"]
+page_up = ["Option+Up", "PageUp"]
+page_down = ["Option+Down", "PageDown"]
+```
+
+#### WASD (Gaming-Style)
+
+```toml
+[scroll.key_bindings]
+scroll_up = ["w"]
+scroll_down = ["s"]
+scroll_left = ["a"]
+scroll_right = ["d"]
+go_top = ["Shift+W"]
+go_bottom = ["Shift+S"]
+page_up = ["q"]
+page_down = ["e"]
+```
+
+#### Home Row Optimized
+
+```toml
+[scroll.key_bindings]
+scroll_up = ["i"]
+scroll_down = ["k"]
+scroll_left = ["j"]
+scroll_right = ["l"]
+go_top = ["Shift+I"]
+go_bottom = ["Shift+K"]
+page_up = ["u"]
+page_down = ["o"]
+```
+
+### Multi-Key Sequences
+
+Scroll mode supports **multi-key sequences** with a 500ms timeout:
+
+```toml
+[scroll.key_bindings]
+go_top = ["gg"]     # Press 'g' twice within 500ms
+go_bottom = ["Shift+G"]  # Single key with modifier
+```
+
+<Info>
+  If you press `g` and wait > 500ms, the sequence times out and nothing happens. Press `g` twice quickly to trigger `gg`.
+</Info>
+
+## Use Cases
+
+### Web Browsing
+
+**Workflow:**
+1. Open a long article or social media feed
+2. Press `Cmd+Shift+S` (scroll mode)
+3. Use `j`/`k` to scroll through content
+4. Press `gg` to jump back to top
+5. Press `Escape` when done
+
+### PDF Reading
+
+**Workflow:**
+1. Open PDF in Preview or browser
+2. Position cursor over PDF area
+3. `Cmd+Shift+S` (scroll mode)
+4. `Ctrl+D` / `Ctrl+U` for page-by-page navigation
+5. `j`/`k` for fine-tuning position
+
+### Terminal Scrollback
+
+**Workflow:**
+1. Long command output in Terminal
+2. `Cmd+Shift+S` (scroll mode)
+3. `k` to scroll up through output
+4. `Shift+G` to jump back to bottom
+5. `Escape` to exit
+
+### Code Review
+
+**Workflow:**
+1. Large file open in editor or GitHub
+2. `Cmd+Shift+S`
+3. `Ctrl+D` to jump through sections
+4. `j`/`k` to read specific lines
+5. `gg` to return to top
+
+### Document Editing
+
+**Combine with grid mode for cursor positioning:**
+
+1. `Cmd+Shift+G` (grid mode) → Jump to document section
+2. `Cmd+Shift+S` (scroll mode) → Scroll through content
+3. `Escape` → Exit, cursor is positioned where you scrolled to
+
+## Advanced Techniques
+
+### Rapid Navigation Pattern
+
+For long documents, combine jump and scroll:
+
+```
+1. gg          → Jump to top
+2. Ctrl+D      → Scan first section
+3. Ctrl+D      → Next section
+4. j j j       → Fine-tune position
+5. Shift+G     → Jump to end
+6. Ctrl+U      → Scroll up a bit
+```
+
+### Horizontal Scrolling
+
+For wide content (tables, code with long lines):
+
+```
+1. Cmd+Shift+S → Activate scroll mode
+2. l l l       → Scroll right to see more
+3. h h h       → Scroll back left
+```
+
+### Staying in Scroll Mode
+
+Disable `mode_exit_keys` to stay in scroll mode until explicit exit:
+
+```toml
+[scroll]
+mode_exit_keys = ["q"]  # Press 'q' to exit instead of Escape
+```
+
+Then use `Escape` for other purposes (like canceling selections).
+
+### Combining with Direct Actions
+
+Perform mouse actions while in scroll mode:
+
+```
+1. Cmd+Shift+S    → Activate scroll mode
+2. j j j          → Scroll down
+3. Shift+L        → Left-click at current position
+4. k k k          → Scroll back up
+5. Shift+R        → Right-click
+6. Escape         → Exit scroll mode
+```
+
+## Troubleshooting
+
+### Scrolling doesn't work
+
+**Cause 1:** Cursor not positioned over scrollable area.
+
+**Solution:** Move cursor over the window/pane you want to scroll before activating scroll mode.
+
+**Cause 2:** App doesn't support scroll events.
+
+**Solution:** Some apps with custom UI don't respond to scroll events. Try using the app's native scroll keys instead.
+
+### Scrolling too slow/fast
+
+**Cause:** `scroll_step` not tuned for your preference.
+
+**Solution:**
+```toml
+[scroll]
+scroll_step = 100  # Increase for faster
+# or
+scroll_step = 20   # Decrease for slower
+```
+
+### Key conflicts with app
+
+**Cause:** Scroll keys conflict with app shortcuts.
+
+**Solution:** Remap to different keys:
+```toml
+[scroll.key_bindings]
+scroll_up = ["i"]    # Use 'i' instead of 'k'
+scroll_down = ["m"]  # Use 'm' instead of 'j'
+```
+
+### Multi-key sequence not working
+
+**Cause:** Typing too slowly (> 500ms timeout).
+
+**Solution:** Type faster, or use single-key binding:
+```toml
+[scroll.key_bindings]
+go_top = ["Home"]        # Single key
+go_bottom = ["End"]      # Single key
+```
+
+### Scroll direction reversed
+
+**Cause:** Personal preference or muscle memory.
+
+**Solution:** Swap key bindings:
+```toml
+[scroll.key_bindings]
+scroll_up = ["j"]    # j goes up
+scroll_down = ["k"]  # k goes down
+```
+
+### Can't exit scroll mode
+
+**Cause:** Exit key not working or reassigned.
+
+**Solution:**
+```toml
+[general]
+mode_exit_keys = ["Escape", "q"]  # Multiple exit options
+```
+
+## Mode Indicator
+
+Show a visual indicator when scroll mode is active:
+
+```toml
+[mode_indicator.scroll]
+enabled = true
+text = "Scroll"
+
+# Optional: custom colors for scroll mode
+background_color_light = "#F200CFCF"
+background_color_dark = "#F2007A9E"
+```
+
+The indicator follows your cursor and shows "Scroll" (or your custom text).
+
+<Tip>
+  Mode indicator is especially useful if you have multiple modes and want visual confirmation of which one is active.
+</Tip>
+
+## Performance
+
+- **Activation time:** < 5ms
+- **Memory usage:** < 0.5MB
+- **CPU usage:** < 0.1% when idle, < 1% during scrolling
+- **Latency:** Immediate (no network calls)
+
+## Comparison with Other Tools
+
+| Feature | Neru Scroll | Vimium (browser) | Custom Karabiner |
+|---------|-------------|------------------|------------------|
+| System-wide | ✅ Yes | ❌ Browser only | ✅ Yes (complex setup) |
+| Vim bindings | ✅ Yes | ✅ Yes | ⚠️ Manual config |
+| Remappable | ✅ Fully | ⚠️ Limited | ✅ Fully |
+| Visual indicator | ✅ Yes | ❌ No | ❌ No |
+| Multi-key sequences | ✅ Yes | ✅ Yes | ⚠️ Complex |
+
+## Integration with Other Modes
+
+### Grid + Scroll Workflow
+
+```
+1. Cmd+Shift+G → bd → Position cursor in document
+2. Cmd+Shift+S → Enter scroll mode
+3. j/k → Read through content
+4. Escape → Exit
+```
+
+### Hints + Scroll Workflow
+
+```
+1. Cmd+Shift+Space → f → Click a link
+2. (New page loads)
+3. Cmd+Shift+S → Enter scroll mode
+4. Ctrl+D → Scan page quickly
+5. Escape → Exit when done
+```
+
+### Recursive Grid + Scroll Workflow
+
+```
+1. Cmd+Shift+C → uik → Position precisely
+2. Cmd+Shift+S → Enter scroll mode
+3. j/k → Scroll from that position
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Recursive Grid" icon="grid" href="/concepts/recursive-grid">
+    Position cursor before scrolling
+  </Card>
+  <Card title="Grid Mode" icon="table-cells" href="/concepts/grid-mode">
+    Quick jumps to screen regions
+  </Card>
+  <Card title="Hints Mode" icon="hand-pointer" href="/concepts/hints-mode">
+    Click elements before scrolling
+  </Card>
+  <Card title="Configuration Reference" icon="gear" href="/guides/configuration">
+    Full scroll mode configuration options
+  </Card>
+</CardGroup>

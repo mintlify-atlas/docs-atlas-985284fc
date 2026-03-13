@@ -1,0 +1,356 @@
+---
+title: "Porting Guide"
+description: "How to implement platform adapters and port Neru to new operating systems"
+---
+
+## Overview
+
+This guide walks you through implementing platform-specific adapters for Neru. Whether you're adding a feature to an existing platform or porting Neru to a new OS, you'll find the architectural patterns and step-by-step instructions here.
+
+## Prerequisites
+
+Before contributing to platform support:
+
+1. Read the [Cross-Platform Architecture](/development/cross-platform) overview
+2. Understand Go build tags and interfaces
+3. Have access to the target platform for testing
+
+## Adding a Feature to an Existing Platform
+
+### Step 1: Find the Right Adapter
+
+Locate the file responsible for the feature you want to implement:
+
+| Feature | Location |
+| :------ | :------- |
+| **Screen bounds, cursor, dark mode** | `internal/core/infra/platform/<os>/system.go` |
+| **Global hotkeys** | `internal/core/infra/hotkeys/manager_<os>.go` |
+| **Global keyboard event tap** | `internal/core/infra/eventtap/eventtap_<os>.go` |
+| **Application watcher** | `internal/core/infra/appwatcher/platform_<os>.go` |
+| **UI overlays** | `internal/app/components/*/overlay_<os>.go` |
+
+### Step 2: Replace the Stub Implementation
+
+Most unimplemented methods currently return:
+
+```go
+return derrors.New(derrors.CodeNotSupported, "X not yet implemented on linux")
+```
+
+Replace the stub with a real implementation:
+
+```go
+// Before
+func (s *LinuxSystem) GetScreenBounds() (Rect, error) {
+    return Rect{}, derrors.New(derrors.CodeNotSupported, 
+        "GetScreenBounds not yet implemented on linux")
+}
+
+// After
+func (s *LinuxSystem) GetScreenBounds() (Rect, error) {
+    // Use X11/Wayland APIs to get screen dimensions
+    display := C.XOpenDisplay(nil)
+    if display == nil {
+        return Rect{}, derrors.New(derrors.CodeInternal, "failed to open X display")
+    }
+    defer C.XCloseDisplay(display)
+    
+    screen := C.XDefaultScreenOfDisplay(display)
+    return Rect{
+        Width:  int(C.XWidthOfScreen(screen)),
+        Height: int(C.XHeightOfScreen(screen)),
+    }, nil
+}
+```
+
+### Step 3: Add Tests
+
+Unit tests go next to the implementation file:
+
+```go
+// system_linux_test.go
+//go:build linux
+package linux
+
+import "testing"
+
+func TestGetScreenBounds(t *testing.T) {
+    sys := NewSystem()
+    bounds, err := sys.GetScreenBounds()
+    if err != nil {
+        t.Fatalf("GetScreenBounds failed: %v", err)
+    }
+    if bounds.Width <= 0 || bounds.Height <= 0 {
+        t.Errorf("Invalid screen bounds: %+v", bounds)
+    }
+}
+```
+
+Integration tests (that require a real display/OS) use a separate build tag:
+
+```go
+// system_integration_linux_test.go
+//go:build integration && linux
+package linux
+```
+
+### Step 4: Run CI Locally
+
+On the target OS:
+
+```bash
+just lint    # Run linters
+just vet     # Run static analysis
+just test    # Run unit tests
+just build   # Compile binary
+```
+
+## Adding a New OS-Specific Operation
+
+### Option A: Add to SystemPort (Broadly Applicable)
+
+Use this approach when the operation is needed across multiple services.
+
+#### 1. Define the Port Interface
+
+Add the method to `internal/core/ports/system.go`:
+
+```go
+type SystemPort interface {
+    GetScreenBounds() (Rect, error)
+    GetCursorPosition() (Point, error)
+    IsDarkMode() (bool, error)
+    
+    // New method
+    GetSystemLocale() (string, error)
+}
+```
+
+#### 2. Implement for Each Platform
+
+**macOS** (`internal/core/infra/platform/darwin/system.go`):
+
+```go
+func (s *DarwinSystem) GetSystemLocale() (string, error) {
+    locale := C.CFLocaleCopyCurrent()
+    defer C.CFRelease(C.CFTypeRef(locale))
+    // ... implementation
+    return "en_US", nil
+}
+```
+
+**Linux** (`internal/core/infra/platform/linux/system.go`):
+
+```go
+func (s *LinuxSystem) GetSystemLocale() (string, error) {
+    return "", derrors.New(derrors.CodeNotSupported, 
+        "GetSystemLocale not yet implemented on linux")
+}
+```
+
+**Windows** (`internal/core/infra/platform/windows/system.go`):
+
+```go
+func (s *WindowsSystem) GetSystemLocale() (string, error) {
+    return "", derrors.New(derrors.CodeNotSupported, 
+        "GetSystemLocale not yet implemented on windows")
+}
+```
+
+#### 3. Inject SystemPort
+
+Use the port in your service:
+
+```go
+type MyService struct {
+    system ports.SystemPort
+}
+
+func (s *MyService) DoSomething() error {
+    locale, err := s.system.GetSystemLocale()
+    if derrors.IsNotSupported(err) {
+        // Graceful fallback
+        locale = "en_US"
+    } else if err != nil {
+        return err
+    }
+    // Use locale...
+}
+```
+
+### Option B: Use a Dispatch Pair (Isolated Operations)
+
+Use this approach when the operation is only needed in one infrastructure package.
+
+#### 1. Create Platform-Specific Dispatcher
+
+**Darwin** (`internal/core/infra/appwatcher/platform_darwin.go`):
+
+```go
+//go:build darwin
+package appwatcher
+
+import "github.com/y3owk1n/neru/internal/core/infra/platform/darwin"
+
+func platformWatchApps() {
+    darwin.StartAppWatcher()
+}
+```
+
+#### 2. Create Stub Dispatcher
+
+**Stub** (`internal/core/infra/appwatcher/platform_stub.go`):
+
+```go
+//go:build !darwin
+package appwatcher
+
+func platformWatchApps() {
+    // No-op on non-darwin platforms
+}
+```
+
+#### 3. Call from Shared Code
+
+**Shared** (`internal/core/infra/appwatcher/watcher.go`):
+
+```go
+package appwatcher
+
+func StartWatcher() {
+    platformWatchApps() // No build tag needed here
+}
+```
+
+## Build Tags Reference
+
+### Platform Tags
+
+```go
+//go:build darwin
+//go:build linux
+//go:build windows
+```
+
+### Negation Tags
+
+```go
+//go:build !darwin  // Everything except macOS
+```
+
+### Combined Tags
+
+```go
+//go:build integration && linux  // Integration tests on Linux only
+```
+
+## Platform-Specific File Naming
+
+Follow these conventions for clarity:
+
+| Pattern | Example | Purpose |
+| :------ | :------ | :------ |
+| `*_<os>.go` | `system_darwin.go` | Platform implementation |
+| `*_<os>_test.go` | `system_linux_test.go` | Unit tests |
+| `*_integration_<os>_test.go` | `system_integration_linux_test.go` | Integration tests |
+| `*_stub.go` | `platform_stub.go` | Stub for unsupported platforms |
+
+## Error Handling: CodeNotSupported
+
+When a feature is not yet implemented, return `CodeNotSupported`:
+
+```go
+return derrors.New(derrors.CodeNotSupported, 
+    "feature X not yet implemented on linux")
+```
+
+### Graceful Degradation
+
+Callers should check for `CodeNotSupported` and handle gracefully:
+
+```go
+elements, err := accessibility.GetClickableElements()
+if derrors.IsNotSupported(err) {
+    // Fall back to grid mode
+    log.Warn("Accessibility not supported, using grid mode")
+    return useGridMode()
+} else if err != nil {
+    return err
+}
+```
+
+## Platform Factory Pattern
+
+The factory pattern ensures OS-specific code is never imported by shared code.
+
+**Shared Factory** (`internal/core/infra/platform/factory.go`):
+
+```go
+package platform
+
+import "github.com/y3owk1n/neru/internal/core/ports"
+
+func NewSystemPort() ports.SystemPort {
+    return newPlatformSystem() // Delegated to platform-specific file
+}
+```
+
+**Platform-Specific Factory** (`internal/core/infra/platform/factory_darwin.go`):
+
+```go
+//go:build darwin
+package platform
+
+import "github.com/y3owk1n/neru/internal/core/infra/platform/darwin"
+
+func newPlatformSystem() ports.SystemPort {
+    return darwin.NewSystem()
+}
+```
+
+**Stub Factory** (`internal/core/infra/platform/factory_stub.go`):
+
+```go
+//go:build !darwin
+package platform
+
+import "github.com/y3owk1n/neru/internal/core/infra/platform/stub"
+
+func newPlatformSystem() ports.SystemPort {
+    return stub.NewSystem()
+}
+```
+
+## Application Identifier Terminology
+
+The codebase uses "bundle ID" as a generic term for platform application identifiers:
+
+| Platform | Term | Example |
+| :------- | :--- | :------ |
+| **macOS** | Bundle ID | `com.apple.Safari` |
+| **Linux** | Desktop ID / executable | `firefox.desktop` or `firefox` |
+| **Windows** | AppUserModelID / executable | `Microsoft.Edge` or `msedge.exe` |
+
+The `FocusedAppBundleID` method in `ports.AccessibilityPort` returns the appropriate identifier for the target platform.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Linux Support" icon="linux" href="/development/linux-support">
+    View Linux-specific implementation details
+  </Card>
+  <Card title="Windows Support" icon="windows" href="/development/windows-support">
+    View Windows-specific implementation details
+  </Card>
+</CardGroup>
+
+## Get Help
+
+<CardGroup cols={2}>
+  <Card title="Linux Support Discussion" icon="github" href="https://github.com/y3owk1n/neru/discussions/559">
+    Ask questions about Linux porting
+  </Card>
+  <Card title="Cross-Platform Issues" icon="tags" href="https://github.com/y3owk1n/neru/issues?q=is%3Aopen+is%3Aissue+label%3Across-platform">
+    Browse cross-platform tasks
+  </Card>
+</CardGroup>

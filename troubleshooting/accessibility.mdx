@@ -1,0 +1,385 @@
+---
+title: Accessibility Permissions
+description: Setting up and troubleshooting accessibility permissions for Neru
+---
+
+## Why Accessibility Permissions?
+
+Neru requires **Accessibility permissions** to:
+- Detect clickable elements on screen
+- Capture keyboard events
+- Send simulated mouse clicks and key presses
+- Read window and UI element positions
+
+<Warning>
+Without Accessibility permissions, Neru cannot function at all.
+</Warning>
+
+---
+
+## Granting Permissions
+
+### First-Time Setup
+
+1. Open **System Settings**
+2. Navigate to **Privacy & Security**
+3. Click **Accessibility** in the sidebar
+4. Click the **lock icon** at the bottom and authenticate
+5. Click the **+** button
+6. Navigate to `/Applications/Neru.app` and add it
+7. Ensure the **checkbox next to Neru is enabled**
+
+### Via Command Line
+
+Check permission status:
+
+```bash
+neru doctor
+```
+
+Expected output when permissions are granted:
+```
+✓ Accessibility permissions: granted
+✓ Daemon status: running
+✓ Config: loaded from ~/.config/neru/config.toml
+```
+
+---
+
+## Troubleshooting Permissions
+
+<AccordionGroup>
+  <Accordion title="Permission granted but not working">
+    **Reset permissions:**
+
+    1. Open **System Settings → Privacy & Security → Accessibility**
+    2. **Remove Neru** from the list (click `-` button)
+    3. **Re-add Neru** (click `+` button)
+    4. Ensure checkbox is **enabled**
+    5. **Restart Neru:**
+       ```bash
+       pkill neru && neru launch
+       ```
+  </Accordion>
+
+  <Accordion title='"Permission denied" errors in logs'>
+    **Check permission status:**
+
+    ```bash
+    neru doctor
+    ```
+
+    If permissions show as not granted:
+
+    1. Go to **System Settings → Privacy & Security → Accessibility**
+    2. Verify Neru is in the list
+    3. Verify the checkbox is **checked**
+    4. If not in list, add it manually
+    5. Restart Neru:
+       ```bash
+       pkill neru && neru launch
+       ```
+  </Accordion>
+
+  <Accordion title="Neru not appearing in Accessibility list">
+    **Manually add Neru:**
+
+    1. Open **System Settings → Privacy & Security → Accessibility**
+    2. Click the **lock icon** at the bottom
+    3. Authenticate with your password
+    4. Click the **+** button
+    5. Navigate to `/Applications/Neru.app`
+    6. Click **Open**
+    7. Ensure the checkbox next to Neru is **enabled**
+    8. Restart Neru:
+       ```bash
+       pkill neru && neru launch
+       ```
+  </Accordion>
+
+  <Accordion title="Permission revoked after macOS update">
+    macOS sometimes revokes permissions after system updates.
+
+    **Re-grant permissions:**
+
+    1. Go to **System Settings → Privacy & Security → Accessibility**
+    2. **Remove Neru** from list
+    3. **Re-add Neru**
+    4. Ensure checkbox is **enabled**
+    5. Restart Neru:
+       ```bash
+       pkill neru && neru launch
+       ```
+  </Accordion>
+
+  <Accordion title="Permission prompt never appears">
+    If macOS never prompts for Accessibility permission:
+
+    **Manually trigger permission request:**
+
+    ```bash
+    # Kill any running Neru process
+    pkill -9 neru
+
+    # Launch Neru (should trigger permission prompt)
+    neru launch
+    ```
+
+    If still no prompt:
+
+    1. Manually add Neru in **System Settings** (see above)
+    2. Restart Neru
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Secure Input Detection
+
+### What is Secure Input?
+
+Some apps enable **Secure Input** mode to prevent keylogging (e.g., password managers, security apps). When Secure Input is active:
+
+- Neru cannot capture keyboard events
+- Hotkeys may not work
+- Hints and grids cannot be triggered via keyboard
+
+### Detecting Secure Input
+
+Check if Secure Input is active:
+
+```bash
+ioreg -l -w 0 | grep SecureInput
+```
+
+If output shows `kCGSSessionSecureInputPID`, Secure Input is active.
+
+### Apps Known to Enable Secure Input
+
+- **1Password**
+- **Terminal.app** (when entering `sudo` password)
+- **iTerm2** (when secure input is enabled)
+- **Security-focused password fields**
+
+### Workarounds
+
+<AccordionGroup>
+  <Accordion title="1Password / Password Managers">
+    Check if your password manager has a setting to disable Secure Input:
+
+    **1Password:**
+    - Settings → Security → Enable "Allow keyboard shortcuts"
+    - Disable "Secure Input" if available
+
+    **Alternatively:**
+    - Use Neru's CLI directly:
+      ```bash
+      neru hints
+      neru grid
+      ```
+  </Accordion>
+
+  <Accordion title="Terminal / iTerm2">
+    **iTerm2:**
+    - Go to **Preferences → Security**
+    - Uncheck **Enable Secure Keyboard Entry**
+
+    **Terminal.app:**
+    - Secure Input is automatically enabled when entering passwords
+    - This is normal behavior and will disable after password entry
+  </Accordion>
+
+  <Accordion title="Other Apps">
+    If an app enables Secure Input:
+
+    1. Check app preferences for Secure Input settings
+    2. Disable if possible
+    3. Use Neru CLI as fallback:
+       ```bash
+       neru hints
+       neru grid
+       ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Permission Diagnostics
+
+### Run Full Diagnostics
+
+```bash
+neru doctor
+```
+
+Expected output:
+
+```
+✓ Accessibility permissions: granted
+✓ Daemon status: running
+✓ Config: loaded from ~/.config/neru/config.toml
+```
+
+### Check Daemon Status
+
+```bash
+neru status
+```
+
+Expected output:
+
+```
+Daemon: running
+Socket: /var/folders/.../T/neru.sock
+Config: ~/.config/neru/config.toml
+```
+
+### View Permission Errors in Logs
+
+```bash
+# Search for permission errors
+grep -i "permission" ~/Library/Logs/neru/app.log
+
+# Search for accessibility errors
+grep -i "accessibility" ~/Library/Logs/neru/app.log
+```
+
+Common error messages:
+
+- **"Failed to get AX elements"** → Accessibility permission not granted
+- **"AX API error"** → Permission granted but needs reset
+- **"Permission denied"** → macOS blocking access
+
+---
+
+## macOS Version-Specific Issues
+
+<AccordionGroup>
+  <Accordion title="macOS Sonoma (14.x)">
+    **Known issue:** Some users report permissions being revoked after sleep.
+
+    **Workaround:**
+    1. Remove and re-add Neru in Accessibility settings
+    2. Restart Neru after waking from sleep:
+       ```bash
+       pkill neru && neru launch
+       ```
+  </Accordion>
+
+  <Accordion title="macOS Ventura (13.x)">
+    **Known issue:** Permission prompt may not appear on first launch.
+
+    **Workaround:**
+    - Manually add Neru in System Settings (see above)
+  </Accordion>
+
+  <Accordion title="macOS Monterey (12.x) and earlier">
+    Accessibility permissions path:
+    - **System Preferences → Security & Privacy → Privacy → Accessibility**
+
+    (Note the different path compared to Ventura+)
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Verifying Permissions After Setup
+
+### Quick Test
+
+After granting permissions:
+
+```bash
+# 1. Launch daemon
+neru launch
+
+# 2. Check status
+neru status
+
+# 3. Test basic functionality
+neru hints
+
+# 4. Verify no permission errors in logs
+tail -20 ~/Library/Logs/neru/app.log
+```
+
+If all commands succeed without errors, permissions are correctly configured.
+
+### Enable Debug Logging
+
+For detailed permission diagnostics:
+
+```toml
+# ~/.config/neru/config.toml
+[logging]
+log_level = "debug"
+```
+
+Restart and check logs:
+
+```bash
+pkill neru && neru launch
+tail -f ~/Library/Logs/neru/app.log
+```
+
+---
+
+## Reset Everything
+
+If permissions are completely broken:
+
+<Warning>
+**Full Permission Reset:**
+
+```bash
+# 1. Force quit Neru
+pkill -9 neru
+
+# 2. Remove from Accessibility list
+# System Settings → Privacy & Security → Accessibility
+# Click "-" button to remove Neru
+
+# 3. Re-add Neru
+# Click "+" button → Navigate to /Applications/Neru.app → Open
+
+# 4. Enable checkbox
+# Ensure checkbox next to Neru is checked
+
+# 5. Restart Neru
+neru launch
+
+# 6. Verify
+neru doctor
+```
+</Warning>
+
+---
+
+## Getting Help
+
+If permissions still don't work after following all steps:
+
+1. **Gather information:**
+   ```bash
+   # macOS version
+   sw_vers
+
+   # Neru version
+   neru --version
+
+   # Permission status
+   neru doctor
+
+   # Recent logs
+   tail -100 ~/Library/Logs/neru/app.log > neru-logs.txt
+   ```
+
+2. **Search existing issues:**
+   - [GitHub Issues](https://github.com/y3owk1n/neru/issues)
+
+3. **Open a new issue** with:
+   - macOS version
+   - Neru version
+   - Output of `neru doctor`
+   - Relevant log excerpts
+   - Steps you've already tried

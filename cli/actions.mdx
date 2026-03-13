@@ -1,0 +1,531 @@
+---
+title: Action Commands
+description: Perform immediate mouse actions at cursor position
+icon: hand-pointer
+---
+
+Action commands perform immediate mouse operations at the current cursor position or specified coordinates. These commands are useful for scripting and automation.
+
+## Overview
+
+All action commands:
+
+- Execute immediately (no navigation mode)
+- Operate at current cursor position (unless coordinates specified)
+- Return immediately after execution
+- Require running daemon
+
+<Note>
+  Action commands require a running daemon. Use `neru launch` to start the daemon first.
+</Note>
+
+---
+
+## Mouse Click Actions
+
+### neru action left_click
+
+Perform left click at current cursor position.
+
+```bash
+neru action left_click
+```
+
+**Use cases:**
+- Scriptable clicking
+- Automation workflows
+- Quick single click without navigation
+
+### neru action right_click
+
+Perform right click at current cursor position.
+
+```bash
+neru action right_click
+```
+
+**Use cases:**
+- Open context menus
+- Right-click automation
+- Scripted right-click workflows
+
+### neru action middle_click
+
+Perform middle click at current cursor position.
+
+```bash
+neru action middle_click
+```
+
+**Use cases:**
+- Open links in new tab (browser)
+- Middle-click automation
+- Scroll wheel click
+
+---
+
+## Mouse Button Hold/Release
+
+### neru action mouse_down
+
+Press and hold the left mouse button at current cursor position.
+
+```bash
+neru action mouse_down
+```
+
+**Use cases:**
+- Start drag operation
+- Text selection start
+- Hold button for extended interaction
+
+<Warning>
+  Always pair `mouse_down` with `mouse_up` to release the button.
+</Warning>
+
+### neru action mouse_up
+
+Release the left mouse button at current cursor position.
+
+```bash
+neru action mouse_up
+```
+
+**Use cases:**
+- Complete drag operation
+- End text selection
+- Release held button
+
+### Drag Example
+
+```bash drag-operation.sh
+#!/bin/bash
+# Move to start position
+neru action move_mouse --x 100 --y 100
+
+# Press and hold
+neru action mouse_down
+
+# Move to end position
+neru action move_mouse --x 300 --y 300
+
+# Release
+neru action mouse_up
+```
+
+---
+
+## Mouse Movement
+
+### neru action move_mouse
+
+Move mouse cursor to absolute position or screen center.
+
+```bash
+neru action move_mouse [flags]
+```
+
+### Flags
+
+<ParamField path="--x" type="integer" default="0">
+  X coordinate in pixels.
+  
+  - **Without --center**: Required. Absolute X coordinate on screen.
+  - **With --center**: Optional. Horizontal offset from center (default 0).
+  
+  ```bash
+  # Absolute positioning
+  neru action move_mouse --x 500 --y 300
+  
+  # Center with X offset
+  neru action move_mouse --center --x 50
+  ```
+</ParamField>
+
+<ParamField path="--y" type="integer" default="0">
+  Y coordinate in pixels.
+  
+  - **Without --center**: Required. Absolute Y coordinate on screen.
+  - **With --center**: Optional. Vertical offset from center (default 0).
+  
+  ```bash
+  # Absolute positioning
+  neru action move_mouse --x 500 --y 300
+  
+  # Center with Y offset
+  neru action move_mouse --center --y -30
+  ```
+</ParamField>
+
+<ParamField path="--center" type="boolean" default="false">
+  Move to center of active screen.
+  
+  When used:
+  - Cursor moves to screen center
+  - `--x` and `--y` become optional offsets from center
+  - Omitted offsets default to 0
+  
+  ```bash
+  # Move to exact center
+  neru action move_mouse --center
+  
+  # Center with both offsets
+  neru action move_mouse --center --x 50 --y -30
+  
+  # Center with single offset
+  neru action move_mouse --center --x 100
+  ```
+</ParamField>
+
+### Movement Modes
+
+#### Absolute Positioning
+
+Move to exact screen coordinates:
+
+```bash
+# Both --x and --y are required
+neru action move_mouse --x 500 --y 300
+```
+
+Coordinates are relative to the current display.
+
+#### Screen Center
+
+Move to center of active screen:
+
+```bash
+# Move to exact center
+neru action move_mouse --center
+```
+
+#### Center with Offset
+
+Move to center with offset:
+
+```bash
+# Both axes offset
+neru action move_mouse --center --x 50 --y -30
+
+# Horizontal offset only (Y defaults to 0)
+neru action move_mouse --center --x 100
+
+# Vertical offset only (X defaults to 0)
+neru action move_mouse --center --y -50
+```
+
+### Examples
+
+<CodeGroup>
+```bash Absolute position
+# Move to coordinates (500, 300)
+neru action move_mouse --x 500 --y 300
+```
+
+```bash Screen center
+# Move to exact center of active screen
+neru action move_mouse --center
+```
+
+```bash Center with offset
+# Move to center, then 50px right and 30px up
+neru action move_mouse --center --x 50 --y -30
+```
+
+```bash Horizontal offset only
+# Move to center, then 100px right
+neru action move_mouse --center --x 100
+```
+
+```bash Vertical offset only
+# Move to center, then 50px down
+neru action move_mouse --center --y 50
+```
+</CodeGroup>
+
+---
+
+### neru action move_mouse_relative
+
+Move mouse cursor by delta from current position.
+
+```bash
+neru action move_mouse_relative --dx <pixels> --dy <pixels>
+```
+
+### Flags
+
+<ParamField path="--dx" type="integer" required>
+  Delta X in pixels.
+  
+  - **Positive values**: Move right
+  - **Negative values**: Move left
+  - **Zero**: No horizontal movement
+  
+  ```bash
+  neru action move_mouse_relative --dx 10 --dy 0   # Move 10px right
+  neru action move_mouse_relative --dx -20 --dy 0  # Move 20px left
+  ```
+</ParamField>
+
+<ParamField path="--dy" type="integer" required>
+  Delta Y in pixels.
+  
+  - **Positive values**: Move down
+  - **Negative values**: Move up
+  - **Zero**: No vertical movement
+  
+  ```bash
+  neru action move_mouse_relative --dx 0 --dy 15   # Move 15px down
+  neru action move_mouse_relative --dx 0 --dy -25  # Move 25px up
+  ```
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bash Move right and down
+neru action move_mouse_relative --dx 10 --dy 5
+```
+
+```bash Move left and up
+neru action move_mouse_relative --dx -20 --dy -15
+```
+
+```bash Horizontal only
+neru action move_mouse_relative --dx 50 --dy 0
+```
+
+```bash Vertical only
+neru action move_mouse_relative --dx 0 --dy -30
+```
+</CodeGroup>
+
+---
+
+## Scripting Examples
+
+### Automated Click Sequence
+
+```bash click-sequence.sh
+#!/bin/bash
+
+# Move to first button
+neru action move_mouse --x 200 --y 150
+nneru action left_click
+sleep 0.5
+
+# Move to second button
+neru action move_mouse --x 200 --y 200
+neru action left_click
+sleep 0.5
+
+# Move to third button
+neru action move_mouse --x 200 --y 250
+neru action left_click
+```
+
+### Drag and Drop
+
+```bash drag-drop.sh
+#!/bin/bash
+
+# Move to source
+neru action move_mouse --x 100 --y 100
+
+# Start drag
+neru action mouse_down
+sleep 0.1
+
+# Move to target
+neru action move_mouse --x 300 --y 300
+
+# Drop
+neru action mouse_up
+```
+
+### Relative Movement Pattern
+
+```bash move-pattern.sh
+#!/bin/bash
+
+# Start from center
+neru action move_mouse --center
+
+# Draw a square with relative movements
+neru action move_mouse_relative --dx 100 --dy 0
+sleep 0.2
+neru action move_mouse_relative --dx 0 --dy 100
+sleep 0.2
+neru action move_mouse_relative --dx -100 --dy 0
+sleep 0.2
+neru action move_mouse_relative --dx 0 --dy -100
+```
+
+### Context Menu Automation
+
+```bash context-menu.sh
+#!/bin/bash
+
+# Move to target
+neru action move_mouse --x 400 --y 300
+
+# Open context menu
+neru action right_click
+sleep 0.3
+
+# Select menu item (move down and click)
+neru action move_mouse_relative --dx 0 --dy 30
+neru action left_click
+```
+
+### Center-Based Navigation
+
+```bash center-nav.sh
+#!/bin/bash
+
+# Move to screen center
+neru action move_mouse --center
+
+# Click slightly above center
+neru action move_mouse --center --y -50
+neru action left_click
+sleep 0.3
+
+# Click slightly below center
+neru action move_mouse --center --y 50
+neru action left_click
+```
+
+---
+
+## Integration with Navigation
+
+Action commands work seamlessly with navigation modes:
+
+### Hints + Action
+
+```bash
+# Navigate with hints, then perform action
+neru hints --action right_click
+# Type hint label to right-click element
+```
+
+### Grid + Action
+
+```bash
+# Navigate with grid, then perform action
+neru grid --action left_click
+# Type grid coordinates to click position
+```
+
+### Manual Navigation + Action
+
+```bash manual-nav.sh
+#!/bin/bash
+
+# Use navigation to position cursor
+neru hints
+# User types hint label
+
+# Then perform action at that position
+neru action left_click
+```
+
+---
+
+## Automation Best Practices
+
+<AccordionGroup>
+  <Accordion title="Add Delays Between Actions">
+    Always add small delays between actions to ensure completion:
+    
+    ```bash
+    neru action left_click
+    sleep 0.3
+    neru action move_mouse --x 200 --y 200
+    ```
+  </Accordion>
+  
+  <Accordion title="Check Daemon Status">
+    Verify daemon is running before executing actions:
+    
+    ```bash
+    if ! neru status &>/dev/null; then
+        echo "Daemon not running"
+        exit 1
+    fi
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle Errors">
+    Check command exit codes:
+    
+    ```bash
+    if ! neru action left_click; then
+        echo "Click failed"
+        exit 1
+    fi
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Relative Movements">
+    Relative movements are more robust than absolute coordinates:
+    
+    ```bash
+    # Better than hardcoded coordinates
+    neru action move_mouse_relative --dx 50 --dy 0
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Troubleshooting
+
+### Action Not Executing
+
+<Steps>
+  <Step title="Check daemon status">
+    ```bash
+    neru status
+    ```
+  </Step>
+  <Step title="Verify cursor position">
+    Ensure cursor is in correct location for action
+  </Step>
+  <Step title="Check permissions">
+    Verify Accessibility permissions are granted
+  </Step>
+</Steps>
+
+### Movement Not Accurate
+
+- Verify coordinates are within screen bounds
+- Check active display resolution
+- Use relative movements for precision
+
+### Clicks Not Registering
+
+- Ensure cursor is over clickable element
+- Add delay before click
+- Verify application accepts programmatic clicks
+
+---
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Navigation Commands" icon="compass" href="/cli/navigation">
+    Navigate to positions before performing actions
+  </Card>
+  <Card title="Daemon Control" icon="power-off" href="/cli/daemon-control">
+    Start and manage the daemon
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/cli/config">
+    Configure action behavior
+  </Card>
+  <Card title="Scripting Guide" icon="code" href="/advanced/scripting">
+    Advanced automation examples
+  </Card>
+</CardGroup>

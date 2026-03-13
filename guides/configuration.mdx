@@ -1,0 +1,1008 @@
+---
+title: Configuration
+description: Complete guide to configuring Neru with TOML
+---
+
+Neru uses TOML for configuration. This guide covers all available options with explanations, use cases, and examples.
+
+## Configuration File Locations
+
+Neru loads configuration from the following locations (in order of priority):
+
+1. **`$XDG_CONFIG_HOME/neru/config.toml`** (if `XDG_CONFIG_HOME` is set)
+2. **`~/.config/neru/config.toml`** (recommended)
+3. **`~/.neru.toml`** (legacy)
+4. **`neru.toml`** (current directory)
+5. **`config.toml`** (current directory)
+
+This search order is the same on all platforms (macOS, Linux, Windows).
+
+### Global Flag
+
+Use the `--config` or `-c` flag to specify a custom config file path when launching:
+
+```bash
+neru launch --config /path/to/config.toml
+```
+
+**No config file?** Neru works out of the box with sensible defaults. Copy from [default-config.toml](https://github.com/y3owk1n/neru/blob/main/configs/default-config.toml) to customize.
+
+**Reload config changes:**
+
+```bash
+neru config reload
+```
+
+Or restart the daemon:
+
+```bash
+pkill neru && neru launch
+```
+
+## General Settings
+
+Core behavior settings that affect all Neru functionality.
+
+<ParamField path="general.excluded_apps" type="array" default='[]'>
+  Bundle IDs where Neru won't activate. Use this to prevent Neru from activating in specific applications like terminals or screen sharing apps.
+
+  <CodeGroup>
+  ```toml Example
+  [general]
+  excluded_apps = [
+      "com.apple.Terminal",
+      "com.googlecode.iterm2",
+      "com.microsoft.rdc.macos"
+  ]
+  ```
+  </CodeGroup>
+
+  Find bundle IDs using: `osascript -e 'id of app "Safari"'`
+</ParamField>
+
+<ParamField path="general.accessibility_check_on_start" type="boolean" default="true">
+  Verify accessibility permissions on launch. Set to `false` to skip the check (may cause runtime errors).
+</ParamField>
+
+<ParamField path="general.restore_cursor_position" type="boolean" default="false">
+  Return cursor to where it was before entering a navigation mode. Mutually exclusive with `center_cursor_position`.
+</ParamField>
+
+<ParamField path="general.center_cursor_position" type="boolean" default="false">
+  Center cursor on the current screen when exiting a navigation mode. Mutually exclusive with `restore_cursor_position`.
+</ParamField>
+
+<ParamField path="general.kb_layout_to_use" type="string" default='""'>
+  Optional InputSourceID for layout mapping. When empty, Neru auto-selects the first available layout.
+
+  <CodeGroup>
+  ```toml macOS Example
+  [general]
+  kb_layout_to_use = "com.apple.keylayout.ABC"
+  ```
+  </CodeGroup>
+
+  Use `defaults read com.apple.HIToolbox AppleEnabledInputSources` to find available layout IDs on macOS.
+</ParamField>
+
+<ParamField path="general.mode_exit_keys" type="array" default='["Escape"]'>
+  Keys that exit any active mode. This array cannot be empty - at least one exit key must be defined.
+
+  <CodeGroup>
+  ```toml Example
+  [general]
+  mode_exit_keys = ["Escape", "q"]
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="general.passthrough_unbounded_keys" type="boolean" default="false">
+  Allow unbound Cmd/Ctrl/Alt shortcuts to reach macOS while a mode is active. Examples that can pass through: `Cmd+Tab`, `Cmd+Space`, `Cmd+W`.
+</ParamField>
+
+<ParamField path="general.passthrough_unbounded_keys_blacklist" type="array" default='[]'>
+  Shortcuts to keep consumed while passthrough is enabled. Each entry must include at least one modifier (Cmd, Ctrl, Alt, or Option).
+
+  <CodeGroup>
+  ```toml Example
+  [general]
+  passthrough_unbounded_keys = true
+  passthrough_unbounded_keys_blacklist = ["Cmd+W", "Cmd+Q"]
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="general.hide_overlay_in_screen_share" type="boolean" default="false">
+  Hide Neru overlays during screen sharing. Uses macOS `NSWindow.sharingType` API. Reliability varies by macOS version and conferencing software.
+</ParamField>
+
+## Hotkeys
+
+Global hotkeys trigger Neru navigation modes from anywhere.
+
+<Note>
+  Defining **any** custom hotkey **replaces ALL defaults**. You must explicitly define every hotkey you want.
+</Note>
+
+<ParamField path="hotkeys" type="object">
+  Global hotkey definitions. Format: `"Modifier1+Modifier2+Key" = "action"`
+
+  <CodeGroup>
+  ```toml Basic Setup
+  [hotkeys]
+  "Cmd+Shift+Space" = "hints"
+  "Cmd+Shift+G" = "grid"
+  "Cmd+Shift+C" = "recursive_grid"
+  "Cmd+Shift+S" = "scroll"
+  ```
+
+  ```toml With Auto-Click
+  [hotkeys]
+  "Cmd+Shift+Space" = "hints --action left_click"
+  "Cmd+Shift+G" = "grid --action left_click"
+  "Cmd+Shift+S" = "scroll"
+  ```
+
+  ```toml Shell Commands
+  [hotkeys]
+  "Cmd+Alt+T" = "exec open -a Terminal"
+  "Cmd+Alt+C" = "exec open -a 'Visual Studio Code'"
+  ```
+  </CodeGroup>
+</ParamField>
+
+## Hints Mode Configuration
+
+Hint mode uses macOS Accessibility APIs to identify clickable UI elements and overlay short labels on them.
+
+### Basic Settings
+
+<ParamField path="hints.enabled" type="boolean" default="true">
+  Enable or disable hints mode globally.
+</ParamField>
+
+<ParamField path="hints.auto_exit_actions" type="array" default='[]'>
+  Actions that auto-exit hints mode after execution. See Mouse Movement Actions for available action names.
+
+  <CodeGroup>
+  ```toml Example
+  [hints]
+  auto_exit_actions = ["left_click", "middle_click"]
+  ```
+  </CodeGroup>
+
+  <Warning>
+    Including `move_mouse_relative` will cause the mode to exit on every arrow-key nudge, which is usually undesirable.
+  </Warning>
+</ParamField>
+
+<ParamField path="hints.mode_exit_keys" type="array" default='[]'>
+  Additional keys that exit hints mode (merged with `general.mode_exit_keys`). Must not conflict with `hint_characters`.
+</ParamField>
+
+<ParamField path="hints.hint_characters" type="string" default="asdfghjkl">
+  Characters used to generate hint labels. Order matters for ergonomics. Must have at least 2 unique ASCII characters.
+
+  <CodeGroup>
+  ```toml Examples
+  [hints]
+  hint_characters = "asdfghjkl"    # Home row (default)
+  hint_characters = "jkl;asdfg"    # Alternative home row
+  hint_characters = "hjklasdfg"    # Vim-style
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="hints.backspace_key" type="string" default="Backspace">
+  Key used for input correction. Must not conflict with `hint_characters` or action key bindings.
+
+  <CodeGroup>
+  ```toml Examples
+  [hints]
+  backspace_key = "Backspace"  # default
+  backspace_key = "Delete"
+  backspace_key = "Ctrl+H"
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="hints.mouse_action_refresh_delay" type="integer" default="0">
+  Delay in milliseconds before refreshing hints after an action (0-10000). Useful for slow-loading apps or dynamic browser content.
+</ParamField>
+
+<ParamField path="hints.max_depth" type="integer" default="50">
+  Maximum accessibility tree depth to traverse. Set to 0 for unlimited depth (may cause performance issues).
+</ParamField>
+
+<ParamField path="hints.parallel_threshold" type="integer" default="20">
+  Minimum number of children to trigger parallel tree processing. Lower values enable more parallelization.
+</ParamField>
+
+### Visibility Options
+
+<ParamField path="hints.include_menubar_hints" type="boolean" default="false">
+  Show hints on menubar items.
+</ParamField>
+
+<ParamField path="hints.include_dock_hints" type="boolean" default="false">
+  Show hints on Dock items.
+</ParamField>
+
+<ParamField path="hints.include_nc_hints" type="boolean" default="false">
+  Show hints in Notification Center.
+</ParamField>
+
+<ParamField path="hints.include_stage_manager_hints" type="boolean" default="false">
+  Show hints in Stage Manager.
+</ParamField>
+
+<ParamField path="hints.detect_mission_control" type="boolean" default="false">
+  Auto-disable active app hints when in Mission Control. Only works on macOS 26+.
+
+  <Warning>
+    Do NOT enable on macOS versions before 26.x - causes false positives.
+  </Warning>
+</ParamField>
+
+<ParamField path="hints.additional_menubar_hints_targets" type="array" default='["com.apple.TextInputMenuAgent", "com.apple.controlcenter", "com.apple.systemuiserver"]'>
+  Extra menubar bundle IDs to include in hints.
+</ParamField>
+
+### Clickable Elements
+
+<ParamField path="hints.clickable_roles" type="array" default='["AXButton", "AXComboBox", "AXCheckBox", "AXRadioButton", "AXLink", "AXPopUpButton", "AXTextField", "AXSlider", "AXTabButton", "AXSwitch", "AXDisclosureTriangle", "AXTextArea", "AXMenuButton", "AXMenuItem", "AXCell", "AXRow"]'>
+  Accessibility roles that are considered clickable and will receive hints.
+</ParamField>
+
+<ParamField path="hints.ignore_clickable_check" type="boolean" default="false">
+  Skip the clickability heuristic. Useful for apps with non-standard UI elements.
+</ParamField>
+
+### Enhanced Browser Support
+
+<ParamField path="hints.additional_ax_support.enable" type="boolean" default="false">
+  Enable additional accessibility features for web browsers and Electron apps. These apps don't expose standard macOS accessibility APIs by default.
+</ParamField>
+
+<ParamField path="hints.additional_ax_support.additional_electron_bundles" type="array" default='[]'>
+  Custom Electron app bundle IDs to enable `AXManualAccessibility` for.
+
+  Default auto-detected bundles: `com.microsoft.VSCode`, `com.exafunction.windsurf`, `com.tinyspeck.slackmacgap`, `com.spotify.client`, `md.obsidian`
+</ParamField>
+
+<ParamField path="hints.additional_ax_support.additional_chromium_bundles" type="array" default='[]'>
+  Custom Chromium browser bundle IDs to enable `AXEnhancedUserInterface` for.
+
+  Default auto-detected bundles: `com.google.Chrome`, `com.brave.Browser`, `net.imput.helium`, `company.thebrowser.Browser`
+</ParamField>
+
+<ParamField path="hints.additional_ax_support.additional_firefox_bundles" type="array" default='[]'>
+  Custom Firefox browser bundle IDs to enable `AXEnhancedUserInterface` for.
+
+  Default auto-detected bundles: `org.mozilla.firefox`, `app.zen-browser.zen`
+</ParamField>
+
+### Hints UI Styling
+
+<ParamField path="hints.ui.font_size" type="integer" default="10">
+  Label font size in points (6-72).
+</ParamField>
+
+<ParamField path="hints.ui.font_family" type="string" default='""'>
+  Font name. Empty string uses the system font. Can use family names (e.g., "SF Mono") or PostScript names (e.g., "SFMono-Bold").
+</ParamField>
+
+<ParamField path="hints.ui.border_radius" type="integer" default="-1">
+  Border radius in pixels. Set to -1 for automatic pill shape.
+</ParamField>
+
+<ParamField path="hints.ui.padding_x" type="integer" default="-1">
+  Horizontal padding in pixels. Set to -1 for automatic sizing based on font size.
+</ParamField>
+
+<ParamField path="hints.ui.padding_y" type="integer" default="-1">
+  Vertical padding in pixels. Set to -1 for automatic sizing based on font size.
+</ParamField>
+
+<ParamField path="hints.ui.border_width" type="integer" default="1">
+  Border width in pixels (minimum 0).
+</ParamField>
+
+<ParamField path="hints.ui.background_color_light" type="string" default="#F200CFCF">
+  Label background color for Light Mode. Format: `#AARRGGBB` where AA is alpha/transparency.
+</ParamField>
+
+<ParamField path="hints.ui.background_color_dark" type="string" default="#F2007A9E">
+  Label background color for Dark Mode.
+</ParamField>
+
+<ParamField path="hints.ui.text_color_light" type="string" default="#FF003554">
+  Label text color for Light Mode.
+</ParamField>
+
+<ParamField path="hints.ui.text_color_dark" type="string" default="#FFFFFFFF">
+  Label text color for Dark Mode.
+</ParamField>
+
+<ParamField path="hints.ui.matched_text_color_light" type="string" default="#FFAAEEFF">
+  Color for matched (typed) text in Light Mode.
+</ParamField>
+
+<ParamField path="hints.ui.matched_text_color_dark" type="string" default="#FF003554">
+  Color for matched (typed) text in Dark Mode.
+</ParamField>
+
+<ParamField path="hints.ui.border_color_light" type="string" default="#FF008A8A">
+  Border color for Light Mode.
+</ParamField>
+
+<ParamField path="hints.ui.border_color_dark" type="string" default="#FF00B4D8">
+  Border color for Dark Mode.
+</ParamField>
+
+## Grid Mode Configuration
+
+Grid mode divides the screen into a coordinate-based grid for direct position selection.
+
+### Basic Settings
+
+<ParamField path="grid.enabled" type="boolean" default="true">
+  Enable or disable grid mode globally.
+</ParamField>
+
+<ParamField path="grid.auto_exit_actions" type="array" default='[]'>
+  Actions that auto-exit grid mode after execution.
+
+  <CodeGroup>
+  ```toml Example
+  [grid]
+  auto_exit_actions = ["left_click"]
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="grid.mode_exit_keys" type="array" default='[]'>
+  Additional keys that exit grid mode (merged with `general.mode_exit_keys`).
+</ParamField>
+
+<ParamField path="grid.characters" type="string" default="abcdefghijklmnpqrstuvwxyz">
+  Primary grid labels. Must have at least 2 unique ASCII characters.
+
+  <CodeGroup>
+  ```toml Examples
+  [grid]
+  characters = "abcdefghijklmnpqrstuvwxyz"  # Default
+  characters = "asdfghjkl"                   # Home row
+  characters = "1234567890"                  # Numbers
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="grid.sublayer_keys" type="string" default="abcdefghijklmnpqrstuvwxyz">
+  Subgrid labels. Falls back to `characters` if not specified. Must have at least 9 characters for 3×3 subgrid.
+</ParamField>
+
+<ParamField path="grid.reset_key" type="string" default='" "'>
+  Key to clear input and start over. Default is space.
+
+  <CodeGroup>
+  ```toml Examples
+  [grid]
+  reset_key = " "         # Space (default)
+  reset_key = ","         # Comma
+  reset_key = "Ctrl+R"    # Modifier combo
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="grid.backspace_key" type="string" default="Backspace">
+  Key for input correction.
+</ParamField>
+
+<ParamField path="grid.live_match_update" type="boolean" default="true">
+  Highlight cells as you type for real-time feedback.
+</ParamField>
+
+<ParamField path="grid.hide_unmatched" type="boolean" default="true">
+  Hide non-matching cells to reduce visual clutter.
+</ParamField>
+
+<ParamField path="grid.prewarm_enabled" type="boolean" default="true">
+  Pre-compute grid on startup for faster first use (~1.5MB RAM).
+</ParamField>
+
+<ParamField path="grid.enable_gc" type="boolean" default="false">
+  Enable periodic memory cleanup. Adds CPU overhead but useful if memory is tight.
+</ParamField>
+
+### Grid UI Styling
+
+<ParamField path="grid.ui.font_size" type="integer" default="10">
+  Label font size in points (6-72).
+</ParamField>
+
+<ParamField path="grid.ui.font_family" type="string" default='""'>
+  Font name. Empty string uses the system font.
+</ParamField>
+
+<ParamField path="grid.ui.border_width" type="integer" default="1">
+  Cell border width in pixels (minimum 0).
+</ParamField>
+
+<ParamField path="grid.ui.background_color_light" type="string" default="#9900B4D8">
+  Cell background color for Light Mode.
+</ParamField>
+
+<ParamField path="grid.ui.background_color_dark" type="string" default="#99003554">
+  Cell background color for Dark Mode.
+</ParamField>
+
+<ParamField path="grid.ui.text_color_light" type="string" default="#FF003554">
+  Label text color for Light Mode.
+</ParamField>
+
+<ParamField path="grid.ui.text_color_dark" type="string" default="#FFB3E8F5">
+  Label text color for Dark Mode.
+</ParamField>
+
+<ParamField path="grid.ui.matched_text_color_light" type="string" default="#FFAAEEFF">
+  Matched cell text color for Light Mode.
+</ParamField>
+
+<ParamField path="grid.ui.matched_text_color_dark" type="string" default="#FFFFFFFF">
+  Matched cell text color for Dark Mode.
+</ParamField>
+
+<ParamField path="grid.ui.matched_background_color_light" type="string" default="#B300CFCF">
+  Matched cell background color for Light Mode.
+</ParamField>
+
+<ParamField path="grid.ui.matched_background_color_dark" type="string" default="#B300B4D8">
+  Matched cell background color for Dark Mode.
+</ParamField>
+
+<ParamField path="grid.ui.matched_border_color_light" type="string" default="#B300CFCF">
+  Matched cell border color for Light Mode.
+</ParamField>
+
+<ParamField path="grid.ui.matched_border_color_dark" type="string" default="#B300B4D8">
+  Matched cell border color for Dark Mode.
+</ParamField>
+
+<ParamField path="grid.ui.border_color_light" type="string" default="#9900B4D8">
+  Cell border color for Light Mode.
+</ParamField>
+
+<ParamField path="grid.ui.border_color_dark" type="string" default="#99003554">
+  Cell border color for Dark Mode.
+</ParamField>
+
+## Recursive Grid Mode Configuration
+
+Recursive grid divides the screen into cells, narrowing selection with each keypress.
+
+### Basic Settings
+
+<ParamField path="recursive_grid.enabled" type="boolean" default="true">
+  Enable or disable recursive grid mode globally.
+</ParamField>
+
+<ParamField path="recursive_grid.auto_exit_actions" type="array" default='[]'>
+  Actions that auto-exit recursive grid mode after execution.
+
+  <CodeGroup>
+  ```toml Example
+  [recursive_grid]
+  auto_exit_actions = ["left_click", "right_click"]
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="recursive_grid.mode_exit_keys" type="array" default='[]'>
+  Additional keys that exit recursive grid mode (merged with `general.mode_exit_keys`).
+</ParamField>
+
+<ParamField path="recursive_grid.grid_cols" type="integer" default="2">
+  Number of columns (minimum 2).
+</ParamField>
+
+<ParamField path="recursive_grid.grid_rows" type="integer" default="2">
+  Number of rows (minimum 2).
+</ParamField>
+
+<ParamField path="recursive_grid.keys" type="string" default="uijk">
+  Cell selection keys. Must have exactly `grid_cols × grid_rows` unique characters.
+
+  <CodeGroup>
+  ```toml Examples
+  [recursive_grid]
+  # 2×2 grid
+  grid_cols = 2
+  grid_rows = 2
+  keys = "uijk"  # u=TL, i=TR, j=BL, k=BR
+
+  # 3×3 grid
+  grid_cols = 3
+  grid_rows = 3
+  keys = "gcrhtnmwv"
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="recursive_grid.backspace_key" type="string" default="Backspace">
+  Key to go up one recursion level (backtrack).
+</ParamField>
+
+<ParamField path="recursive_grid.min_size_width" type="integer" default="25">
+  Stop subdividing below this width in pixels (minimum 10).
+</ParamField>
+
+<ParamField path="recursive_grid.min_size_height" type="integer" default="25">
+  Stop subdividing below this height in pixels (minimum 10).
+</ParamField>
+
+<ParamField path="recursive_grid.max_depth" type="integer" default="10">
+  Maximum recursion levels (1-20).
+</ParamField>
+
+<ParamField path="recursive_grid.reset_key" type="string" default='" "'>
+  Key to reset to initial center position. Default is space.
+</ParamField>
+
+### Recursive Grid UI Styling
+
+<ParamField path="recursive_grid.ui.line_color_light" type="string" default="#FF007A9E">
+  Grid line color for Light Mode.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.line_color_dark" type="string" default="#FF00CFCF">
+  Grid line color for Dark Mode.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.line_width" type="integer" default="1">
+  Line thickness in pixels (minimum 0).
+</ParamField>
+
+<ParamField path="recursive_grid.ui.highlight_color_light" type="string" default="#4D007A9E">
+  Cell highlight color for Light Mode.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.highlight_color_dark" type="string" default="#4D00CFCF">
+  Cell highlight color for Dark Mode.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.text_color_light" type="string" default="#FF007A9E">
+  Cell text color for Light Mode.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.text_color_dark" type="string" default="#FF00CFCF">
+  Cell text color for Dark Mode.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.font_size" type="integer" default="10">
+  Font size for labels in points (6-72).
+</ParamField>
+
+<ParamField path="recursive_grid.ui.font_family" type="string" default='""'>
+  Font family for labels. Empty string uses system font.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background" type="boolean" default="false">
+  Add rounded backgrounds behind cell labels.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background_color_light" type="string" default="#FFAAEEFF">
+  Label background color for Light Mode (used when `label_background` is true).
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background_color_dark" type="string" default="#FF003554">
+  Label background color for Dark Mode (used when `label_background` is true).
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background_padding_x" type="integer" default="-1">
+  Horizontal badge padding. Set to -1 for automatic sizing.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background_padding_y" type="integer" default="-1">
+  Vertical badge padding. Set to -1 for automatic sizing.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background_border_radius" type="integer" default="-1">
+  Badge border radius. Set to -1 for automatic sizing.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.label_background_border_width" type="integer" default="1">
+  Badge border width in pixels. Set to 0 to disable border.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.sub_key_preview" type="boolean" default="false">
+  Draw miniature key grid inside each cell for visual preview.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.sub_key_preview_font_size" type="integer" default="8">
+  Font size for sub-key preview labels (4-72).
+</ParamField>
+
+<ParamField path="recursive_grid.ui.sub_key_preview_autohide_multiplier" type="number" default="1.5">
+  Preview hides when sub-cell size is less than font size × this value. Set to 0 to never hide.
+</ParamField>
+
+<ParamField path="recursive_grid.ui.sub_key_preview_text_color_light" type="string" default="#66007A9E">
+  Sub-key label color for Light Mode (40% opacity by default).
+</ParamField>
+
+<ParamField path="recursive_grid.ui.sub_key_preview_text_color_dark" type="string" default="#6600CFCF">
+  Sub-key label color for Dark Mode (40% opacity by default).
+</ParamField>
+
+## Scroll Mode Configuration
+
+Vim-style scrolling at the cursor position.
+
+<ParamField path="scroll.scroll_step" type="integer" default="50">
+  Pixels per j/k press (minimum 1).
+</ParamField>
+
+<ParamField path="scroll.scroll_step_half" type="integer" default="500">
+  Pixels for Ctrl+D/U half-page scroll (minimum 1).
+</ParamField>
+
+<ParamField path="scroll.scroll_step_full" type="integer" default="1000000">
+  Pixels for gg/G top/bottom navigation (minimum 1).
+</ParamField>
+
+<ParamField path="scroll.mode_exit_keys" type="array" default='[]'>
+  Additional keys that exit scroll mode (merged with `general.mode_exit_keys`).
+</ParamField>
+
+### Scroll Key Bindings
+
+<ParamField path="scroll.key_bindings.scroll_up" type="array" default='["k", "Up"]'>
+  Keys for scrolling up one line.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.scroll_down" type="array" default='["j", "Down"]'>
+  Keys for scrolling down one line.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.scroll_left" type="array" default='["h", "Left"]'>
+  Keys for scrolling left.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.scroll_right" type="array" default='["l", "Right"]'>
+  Keys for scrolling right.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.go_top" type="array" default='["gg", "Cmd+Up"]'>
+  Keys for jumping to the top of the page.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.go_bottom" type="array" default='["Shift+G", "Cmd+Down"]'>
+  Keys for jumping to the bottom of the page.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.page_up" type="array" default='["Ctrl+U", "PageUp"]'>
+  Keys for scrolling up half a page.
+</ParamField>
+
+<ParamField path="scroll.key_bindings.page_down" type="array" default='["Ctrl+D", "PageDown"]'>
+  Keys for scrolling down half a page.
+</ParamField>
+
+## Mode Indicator Configuration
+
+A small label that follows the cursor showing the current mode.
+
+### Per-Mode Settings
+
+<ParamField path="mode_indicator.scroll.enabled" type="boolean" default="true">
+  Show indicator in scroll mode.
+</ParamField>
+
+<ParamField path="mode_indicator.scroll.text" type="string" default="Scroll">
+  Label text for scroll mode. Empty string hides the label.
+</ParamField>
+
+<ParamField path="mode_indicator.hints.enabled" type="boolean" default="false">
+  Show indicator in hints mode.
+</ParamField>
+
+<ParamField path="mode_indicator.hints.text" type="string" default="Hints">
+  Label text for hints mode.
+</ParamField>
+
+<ParamField path="mode_indicator.grid.enabled" type="boolean" default="false">
+  Show indicator in grid mode.
+</ParamField>
+
+<ParamField path="mode_indicator.grid.text" type="string" default="Grid">
+  Label text for grid mode.
+</ParamField>
+
+<ParamField path="mode_indicator.recursive_grid.enabled" type="boolean" default="false">
+  Show indicator in recursive grid mode.
+</ParamField>
+
+<ParamField path="mode_indicator.recursive_grid.text" type="string" default="Recursive Grid">
+  Label text for recursive grid mode.
+</ParamField>
+
+### Mode Indicator UI Styling
+
+<ParamField path="mode_indicator.ui.font_size" type="integer" default="10">
+  Text size in points (minimum 1).
+</ParamField>
+
+<ParamField path="mode_indicator.ui.font_family" type="string" default='""'>
+  Font name. Empty string uses system font.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.background_color_light" type="string" default="#F200CFCF">
+  Background color for Light Mode.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.background_color_dark" type="string" default="#F200CFCF">
+  Background color for Dark Mode.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.text_color_light" type="string" default="#FF003554">
+  Text color for Light Mode.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.text_color_dark" type="string" default="#FF003554">
+  Text color for Dark Mode.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.border_color_light" type="string" default="#FF007A9E">
+  Border color for Light Mode.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.border_color_dark" type="string" default="#FF007A9E">
+  Border color for Dark Mode.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.border_width" type="integer" default="1">
+  Border width in pixels (minimum 0).
+</ParamField>
+
+<ParamField path="mode_indicator.ui.padding_x" type="integer" default="-1">
+  Horizontal padding. Set to -1 for automatic sizing.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.padding_y" type="integer" default="-1">
+  Vertical padding. Set to -1 for automatic sizing.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.border_radius" type="integer" default="-1">
+  Border radius. Set to -1 for automatic pill shape.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.indicator_x_offset" type="integer" default="20">
+  X offset from cursor in pixels.
+</ParamField>
+
+<ParamField path="mode_indicator.ui.indicator_y_offset" type="integer" default="20">
+  Y offset from cursor in pixels.
+</ParamField>
+
+## Mouse Action Configuration
+
+Keyboard-driven cursor movement within hints/grid modes.
+
+<ParamField path="action.move_mouse_step" type="integer" default="10">
+  Pixels per arrow key press (minimum 1).
+
+  <CodeGroup>
+  ```toml Examples
+  [action]
+  move_mouse_step = 10   # Default (~1mm on typical display)
+  move_mouse_step = 5    # Finer control
+  move_mouse_step = 20   # Faster movement
+  ```
+  </CodeGroup>
+</ParamField>
+
+### Action Key Bindings
+
+<ParamField path="action.key_bindings.left_click" type="string" default="Shift+L">
+  Key for performing a left mouse click.
+</ParamField>
+
+<ParamField path="action.key_bindings.right_click" type="string" default="Shift+R">
+  Key for performing a right mouse click.
+</ParamField>
+
+<ParamField path="action.key_bindings.middle_click" type="string" default="Shift+M">
+  Key for performing a middle mouse click.
+</ParamField>
+
+<ParamField path="action.key_bindings.mouse_down" type="string" default="Shift+I">
+  Key for pressing and holding the mouse button.
+</ParamField>
+
+<ParamField path="action.key_bindings.mouse_up" type="string" default="Shift+U">
+  Key for releasing the mouse button.
+</ParamField>
+
+<ParamField path="action.key_bindings.move_mouse_up" type="string" default="Up">
+  Key for moving cursor up.
+</ParamField>
+
+<ParamField path="action.key_bindings.move_mouse_down" type="string" default="Down">
+  Key for moving cursor down.
+</ParamField>
+
+<ParamField path="action.key_bindings.move_mouse_left" type="string" default="Left">
+  Key for moving cursor left.
+</ParamField>
+
+<ParamField path="action.key_bindings.move_mouse_right" type="string" default="Right">
+  Key for moving cursor right.
+</ParamField>
+
+## Smooth Cursor Configuration
+
+Animate cursor movement between positions.
+
+<ParamField path="smooth_cursor.move_mouse_enabled" type="boolean" default="false">
+  Enable smooth mouse movement animation.
+</ParamField>
+
+<ParamField path="smooth_cursor.steps" type="integer" default="10">
+  Number of intermediate positions for animation (minimum 1).
+
+  <CodeGroup>
+  ```toml Examples
+  [smooth_cursor]
+  # Smooth but slower
+  steps = 10
+  delay = 10
+
+  # Faster, less smooth
+  steps = 5
+  delay = 2
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="smooth_cursor.delay" type="integer" default="1">
+  Milliseconds between animation steps (minimum 0).
+</ParamField>
+
+## Systray Configuration
+
+System tray (menu bar) icon configuration.
+
+<ParamField path="systray.enabled" type="boolean" default="true">
+  Show icon in menu bar. Set to `false` for headless mode (control via hotkeys and CLI only).
+
+  <Note>
+    Changing this setting requires a restart. `neru config reload` won't work for this option.
+  </Note>
+</ParamField>
+
+## Font Configuration
+
+Neru tries to find fonts in this order:
+
+1. **PostScript name** (exact match) - e.g., `"SFMono-Bold"`, `"Menlo-Regular"`
+2. **Family name** (looser matching) - e.g., `"SF Mono"`, `"JetBrains Mono"`
+3. **Fallback** to system font
+
+When `font_family = ""` (empty string):
+- **Hints**: Bold system font
+- **Grid/Scroll**: Regular system font
+
+<CodeGroup>
+```toml Monospace Fonts
+[hints]
+
+[hints.ui]
+font_family = "SF Mono"
+font_family = "Menlo"
+font_family = "JetBrains Mono"
+font_family = "Fira Code"
+```
+
+```toml PostScript Names
+[hints]
+
+[hints.ui]
+font_family = "SFMono-Bold"
+font_family = "Menlo-Bold"
+```
+</CodeGroup>
+
+Find available fonts on macOS:
+
+```bash
+system_profiler SPFontsDataType | grep "Family:"
+```
+
+## Color Format
+
+Neru colors use hex notation with optional alpha transparency.
+
+### Supported Formats
+
+| Format | Example | Alpha | Description |
+|--------|---------|-------|-------------|
+| `#AARRGGBB` | `#FF000000` | Yes | 8-char: Alpha + RGB (recommended) |
+| `#RRGGBB` | `#FF0000` | No | 6-char: RGB only (fully opaque) |
+| `#RGB` | `#F00` | No | 3-char shorthand |
+
+### Format Breakdown: `#AARRGGBB`
+
+| Position | Component | Range | Description |
+|----------|-----------|-------|-------------|
+| 1-2 | AA | 00-FF | Alpha (transparency) |
+| 3-4 | RR | 00-FF | Red |
+| 5-6 | GG | 00-FF | Green |
+| 7-8 | BB | 00-FF | Blue |
+
+### Alpha Channel Reference
+
+| Opacity | Alpha | Use Case |
+|---------|-------|----------|
+| 100% | `FF` | Solid colors, high contrast |
+| 95% | `F2` | Slight transparency |
+| 90% | `E6` | Moderate transparency |
+| 80% | `CC` | Noticeable transparency |
+| 70% | `B3` | Semi-transparent (default for grid) |
+| 60% | `99` | More transparent |
+| 50% | `80` | Half transparent |
+| 40% | `66` | Low visibility |
+| 30% | `4D` | Subtle (default highlight) |
+| 20% | `33` | Very subtle |
+| 10% | `1A` | Barely visible |
+| 0% | `00` | Invisible |
+
+### Theme-Aware Colors
+
+All color options use `_light` and `_dark` suffixes to support macOS Dark and Light Mode:
+
+- **`*_light`** — used when macOS is in Light Mode
+- **`*_dark`** — used when macOS is in Dark Mode
+
+When these are not set in your config file (empty string `""`), Neru automatically uses sensible defaults that adapt to your system appearance. The colors update in real time when you switch system themes.
+
+<CodeGroup>
+```toml Custom Colors
+[hints]
+
+[hints.ui]
+# Customizing only light mode background
+background_color_light = "#FF0000AA"  # Custom red for light mode
+# background_color_dark uses the built-in default
+```
+</CodeGroup>
+
+## Logging Configuration
+
+<ParamField path="logging.log_level" type="string" default="info">
+  Logging level. Options: `debug`, `info`, `warn`, `error`.
+</ParamField>
+
+<ParamField path="logging.log_file" type="string" default='""'>
+  Custom log file path. Empty string uses default location.
+</ParamField>
+
+<ParamField path="logging.structured_logging" type="boolean" default="true">
+  Use JSON format for structured logs.
+</ParamField>
+
+<ParamField path="logging.disable_file_logging" type="boolean" default="true">
+  Console only (no file logging).
+</ParamField>
+
+<ParamField path="logging.max_file_size" type="integer" default="10">
+  Maximum log file size in MB before rotation.
+</ParamField>
+
+<ParamField path="logging.max_backups" type="integer" default="5">
+  Number of old log files to keep.
+</ParamField>
+
+<ParamField path="logging.max_age" type="integer" default="30">
+  Days to retain old log files.
+</ParamField>

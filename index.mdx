@@ -1,97 +1,171 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Neru - Mouse-Free Navigation for macOS
+description: Navigate, click, and scroll anywhere on your screen using only your keyboard. Free, open-source, endlessly customizable.
 ---
 
-## Setting up
+<div className="flex flex-col items-center justify-center text-center py-12">
+  <img src="/logo.png" alt="Neru Logo" className="w-32 h-32 mb-6" />
+  <h1 className="text-5xl font-bold mb-4" style={{ color: '#1a1a1a' }}>
+    Mouse-Free OS Navigation
+  </h1>
+  <p className="text-xl mb-8 max-w-2xl" style={{ color: '#545454' }}>
+    Navigate, click, and scroll anywhere on your screen using only your keyboard.<br />
+    Free, open-source, endlessly customizable.
+  </p>
+  <div className="flex gap-4 mb-12">
+    <a 
+      href="/installation" 
+      className="px-6 py-3 font-semibold rounded-md"
+      style={{ 
+        backgroundColor: '#94cb04', 
+        color: '#1a1a1a',
+        textDecoration: 'none'
+      }}
+    >
+      Get Started
+    </a>
+    <a 
+      href="https://github.com/y3owk1n/neru" 
+      className="px-6 py-3 font-semibold rounded-md"
+      style={{ 
+        backgroundColor: '#e6e6e6', 
+        color: '#1a1a1a',
+        textDecoration: 'none'
+      }}
+    >
+      View on GitHub
+    </a>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## What is Neru?
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
+**Neru (練る)** — Japanese for _"to refine and master through practice"_ — lets you navigate, click, and scroll anywhere on your screen using only your keyboard. No mouse. No trackpad. No limits.
+
+It's the free, open-source alternative to Homerow, Mouseless, and Wooshy — with zero paywalls, zero subscriptions, and everything configurable down to the last pixel.
+
+<CardGroup cols={3}>
+  <Card title="Recursive Grid" icon="grid" href="/concepts/recursive-grid">
+    Divide your screen into coordinates and drill down to any region with precision
+  </Card>
+  <Card title="Hints Mode" icon="hand-pointer" href="/concepts/hints-mode">
+    Label every clickable element for instant accessibility-driven navigation
+  </Card>
+  <Card title="Vim Scrolling" icon="arrows-up-down" href="/concepts/scroll-mode">
+    Scroll anywhere with familiar j/k, gg/G, and Ctrl+D/U bindings
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Three Navigation Modes" icon="compass">
+    **Recursive Grid** (recommended), **Grid**, and **Hints** modes work in every app, every window, every corner of macOS
+  </Card>
+  <Card title="Direct Mouse Actions" icon="mouse-pointer">
+    Trigger left click, right click, double click, middle click, and drag & drop via direct keybindings
+  </Card>
+  <Card title="Full CLI & IPC" icon="terminal">
+    Control Neru programmatically, integrate with other tools, or build automation workflows
+  </Card>
+  <Card title="TOML Configuration" icon="file-code">
+    Version-control your config, share it in dotfiles, edit faster than clicking through preference panels
+  </Card>
+  <Card title="Per-App Exclusions" icon="ban">
+    Disable Neru in specific apps where you don't need it
+  </Card>
+  <Card title="Screen Sharing Mode" icon="screen-users">
+    Hide overlays during presentations and screen sharing sessions
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+Get up and running in under 2 minutes:
+
+<Steps>
+  <Step title="Install via Homebrew">
+    ```bash
+    brew tap y3owk1n/tap
+    brew install --cask y3owk1n/tap/neru
+    ```
+  </Step>
+  
+  <Step title="Grant Accessibility Permission">
+    Open **System Settings → Privacy & Security → Accessibility** and enable **Neru**
+  </Step>
+  
+  <Step title="Launch and Try">
+    ```bash
+    open -a Neru
+    ```
+    
+    Press `Cmd+Shift+C` for recursive grid mode, or `Cmd+Shift+Space` for hints mode.
+  </Step>
+</Steps>
+
+<Card title="Full Installation Guide" icon="book-open" href="/installation">
+  See complete installation instructions including Nix, building from source, and auto-start setup
 </Card>
 
-## Make it yours
+## Works Everywhere
 
-Design a docs site that looks great and empowers your users.
+Neru works across native macOS apps, Electron apps, browsers, creative tools, and system UI:
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+| Category | Applications |
+|----------|-------------|
+| **Native macOS** | Finder, Safari, Mail, System Settings, Terminal |
+| **Electron** | VS Code, Cursor, Slack, Spotify, Obsidian, Discord |
+| **Browsers** | Chrome, Firefox, Safari, Arc, Brave, Zen |
+| **Creative** | Figma, Adobe Illustrator, Photoshop |
+| **System UI** | Menubar, Dock, Mission Control, Notification Center |
 
-## Create beautiful pages
+<Info>
+  Grid mode works universally. Hints mode works where the accessibility tree is exposed — see the [Troubleshooting Guide](/troubleshooting/app-compatibility) for app-specific notes.
+</Info>
 
-Everything you need to create world-class documentation.
+## Free Alternative To
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={2}>
+  <Card>
+    **Homerow** — Paid → ✅ Free with Neru
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card>
+    **Mouseless** — Paid → ✅ Free with Neru
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card>
+    **Wooshy** — Paid → ✅ Free with Neru
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card>
+    **Shortcat** — Discontinued → ✅ Active with Neru
   </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## Platform Support
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Note>
+  Neru is **100% compatible with macOS**. All features are fully functional and stable.
+</Note>
+
+<Warning>
+  **Linux & Windows** support is planned but requires community contribution. The infrastructure and interfaces are in place, but native implementations for accessibility, event capture, and overlays need development.
+</Warning>
+
+See [Cross-Platform Development](/development/cross-platform) for technical details and contribution opportunities.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Neru via Homebrew, Nix, or build from source
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Learn the basics and start navigating without your mouse
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Customize every keybinding, color, and behavior
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/daemon-control">
+    Explore command-line control and automation
+  </Card>
+</CardGroup>

@@ -1,0 +1,355 @@
+---
+title: Screen Sharing
+description: Control Neru overlay visibility during screen sharing and presentations
+---
+
+Neru provides features to hide overlays during screen sharing, video calls, and presentations while keeping them visible on your local display.
+
+## Overview
+
+When screen sharing, you may want to:
+- Hide Neru overlays from shared viewers
+- Keep overlays visible on your local screen
+- Quickly toggle visibility without restarting Neru
+
+<Note>
+  Screen sharing features use macOS `NSWindow.sharingType` API. Effectiveness varies by macOS version and screen sharing application.
+</Note>
+
+## Quick Toggle
+
+Toggle overlay visibility during screen sharing:
+
+```bash
+neru toggle-screen-share
+```
+
+**Behavior:**
+- When toggled to **hidden**: Overlays invisible in shared screens, visible locally
+- When toggled to **visible**: Overlays appear normally in screen sharing
+- State resets to **visible** on Neru restart
+
+### System Tray Menu
+
+Alternatively, use the system tray menu:
+
+1. Click the Neru icon in the menu bar
+2. Select **Screen Share: Visible** or **Screen Share: Hidden**
+
+## Configuration
+
+Set default behavior in your config file:
+
+<ParamField path="general.hide_overlay_in_screen_share" type="boolean" default="false">
+  Hide Neru overlays during screen sharing by default.
+  
+  ```toml
+  [general]
+  hide_overlay_in_screen_share = true
+  ```
+</ParamField>
+
+**Values:**
+- `true`: Overlay hidden in shared screens (visible locally)
+- `false`: Overlay always visible (default)
+
+<Note>
+  The `neru toggle-screen-share` command overrides the config setting until Neru is restarted.
+</Note>
+
+## Compatibility
+
+### macOS Version Compatibility
+
+<Tabs>
+  <Tab title="macOS 14 and Earlier">
+    <Card title="✅ Excellent Support" icon="circle-check">
+      Works reliably with most screen sharing applications:
+      - Zoom
+      - Microsoft Teams
+      - Google Meet
+      - Slack
+      - Discord
+      - WebEx
+      - OBS Studio
+    </Card>
+  </Tab>
+  
+  <Tab title="macOS 15.4+">
+    <Card title="⚠️ Limited Support" icon="triangle-exclamation">
+      macOS 15.4+ uses ScreenCaptureKit, which limits the effectiveness of `NSWindow.sharingType` API.
+      
+      **Status:** Limited effectiveness with modern screen capture apps.
+      
+      **Workaround:** Use [app exclusions](/guides/app-exclusions) to fully disable Neru in screen sharing apps.
+    </Card>
+  </Tab>
+</Tabs>
+
+### Application Compatibility
+
+| Application | macOS 14- | macOS 15.4+ |
+|-------------|-----------|-------------|
+| Zoom | ✅ Works | ⚠️ Limited |
+| Microsoft Teams | ✅ Works | ⚠️ Limited |
+| Google Meet | ✅ Works | ⚠️ Limited |
+| Slack | ✅ Works | ⚠️ Limited |
+| Discord | ✅ Works | ⚠️ Limited |
+| OBS Studio | ✅ Works | ⚠️ Limited |
+| QuickTime Screen Recording | ✅ Works | ⚠️ Limited |
+
+<Warning>
+  Always test with your specific screen sharing software and macOS version before relying on this feature for important presentations.
+</Warning>
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Video Calls" icon="video">
+    Hide overlays during Zoom, Teams, or Google Meet calls
+  </Card>
+  <Card title="Presentations" icon="presentation">
+    Keep demo screens clean while presenting
+  </Card>
+  <Card title="Screen Recording" icon="record-vinyl">
+    Record tutorials without visible Neru overlays
+  </Card>
+  <Card title="Live Streaming" icon="tower-broadcast">
+    Stream to OBS/Twitch without navigation hints
+  </Card>
+  <Card title="Pair Programming" icon="users">
+    Share screen without distracting overlays
+  </Card>
+  <Card title="Customer Support" icon="headset">
+    Demo software to customers without UI clutter
+  </Card>
+</CardGroup>
+
+## Workflow Examples
+
+### Quick Toggle Before Meeting
+
+```bash
+# Before starting screen share
+neru toggle-screen-share
+
+# After meeting ends
+neru toggle-screen-share
+```
+
+### Hotkey for Toggle
+
+Add a hotkey to quickly toggle screen share mode:
+
+```toml
+[hotkeys]
+"Cmd+Alt+H" = "toggle-screen-share"
+```
+
+### Always Hidden for Specific Apps
+
+For reliable hiding on macOS 15.4+, exclude screen sharing apps:
+
+```toml
+[general]
+excluded_apps = [
+    "us.zoom.xos",                     # Zoom
+    "com.microsoft.teams",             # Microsoft Teams
+    "com.tinyspeck.slackmacgap",       # Slack
+]
+```
+
+See [App Exclusions](/guides/app-exclusions) for more details.
+
+## Alternative: App Exclusions
+
+If screen sharing visibility toggle doesn't work reliably:
+
+<Steps>
+  <Step title="Find Bundle ID">
+    Get the bundle ID of your screen sharing app:
+    
+    ```bash
+    osascript -e 'id of app "Zoom"'
+    # Output: us.zoom.xos
+    ```
+  </Step>
+  
+  <Step title="Add to Exclusions">
+    Add to your config:
+    
+    ```toml
+    [general]
+    excluded_apps = [
+        "us.zoom.xos",
+    ]
+    ```
+  </Step>
+  
+  <Step title="Reload Config">
+    ```bash
+    neru config reload
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  App exclusions completely disable Neru when the app is focused, while screen sharing toggle only hides the overlay from shared viewers.
+</Note>
+
+## Testing
+
+Test screen sharing visibility:
+
+<Steps>
+  <Step title="Enable Hide Mode">
+    ```bash
+    neru toggle-screen-share
+    ```
+    Or set in config:
+    ```toml
+    [general]
+    hide_overlay_in_screen_share = true
+    ```
+  </Step>
+  
+  <Step title="Start Screen Sharing">
+    Open your screen sharing app (Zoom, Teams, etc.) and start sharing
+  </Step>
+  
+  <Step title="Activate Neru">
+    Trigger a navigation mode:
+    ```bash
+    neru hints
+    ```
+  </Step>
+  
+  <Step title="Verify Visibility">
+    - **Local screen**: Overlays should be visible
+    - **Shared screen** (check with another device): Overlays should be hidden
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Overlays still visible in screen share">
+    **Possible causes:**
+    - Screen sharing app uses ScreenCaptureKit (macOS 15.4+)
+    - Toggle not enabled
+    - App-specific compatibility issue
+    
+    **Solutions:**
+    1. Verify toggle is enabled:
+       ```bash
+       # Check system tray menu: Screen Share: Hidden
+       ```
+    2. Try app exclusions instead:
+       ```toml
+       [general]
+       excluded_apps = ["com.your.screenShareApp"]
+       ```
+    3. Report compatibility issue: https://github.com/y3owk1n/neru/issues
+  </Accordion>
+  
+  <Accordion title="Overlays not visible locally after toggle">
+    **This is unexpected behavior.**
+    
+    **Solution:**
+    1. Toggle again:
+       ```bash
+       neru toggle-screen-share
+       ```
+    2. If issue persists, restart Neru:
+       ```bash
+       pkill neru && neru launch
+       ```
+  </Accordion>
+  
+  <Accordion title="Toggle command not working">
+    **Check:**
+    - Neru daemon is running: `neru status`
+    - No typos in command: `neru toggle-screen-share` (note: hyphenated)
+    
+    **Verify:**
+    ```bash
+    neru status
+    # Should show: Status: running
+    ```
+  </Accordion>
+  
+  <Accordion title="Different behavior on macOS 15.4+">
+    **Expected:** macOS 15.4+ introduced ScreenCaptureKit which limits effectiveness of `NSWindow.sharingType` API.
+    
+    **Solution:** Use app exclusions for reliable hiding:
+    ```toml
+    [general]
+    excluded_apps = [
+        "us.zoom.xos",
+        "com.microsoft.teams",
+    ]
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Configuration Examples
+
+<CodeGroup>
+```toml Always Hide
+[general]
+hide_overlay_in_screen_share = true
+```
+
+```toml With Hotkey
+[general]
+hide_overlay_in_screen_share = false  # Manual toggle via hotkey
+
+[hotkeys]
+"Cmd+Alt+H" = "toggle-screen-share"
+```
+
+```toml App Exclusions Fallback
+[general]
+hide_overlay_in_screen_share = true
+
+# Fallback for apps where toggle doesn't work
+excluded_apps = [
+    "us.zoom.xos",
+    "com.microsoft.teams",
+]
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Before Meetings" icon="flask">
+    Always test screen sharing visibility before important presentations
+  </Card>
+  <Card title="Use Hotkey" icon="keyboard">
+    Configure a hotkey for quick toggling during calls
+  </Card>
+  <Card title="Know Your macOS Version" icon="apple">
+    Understand compatibility limitations on macOS 15.4+
+  </Card>
+  <Card title="Fallback to Exclusions" icon="shield">
+    Use app exclusions for critical meetings if toggle is unreliable
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="App Exclusions" icon="ban" href="/guides/app-exclusions">
+    Disable Neru in specific applications
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Explore all configuration options
+  </Card>
+  <Card title="Hotkeys" icon="keyboard" href="/guides/hotkeys">
+    Configure global keyboard shortcuts
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/daemon-control">
+    Learn CLI commands for scripting
+  </Card>
+</CardGroup>

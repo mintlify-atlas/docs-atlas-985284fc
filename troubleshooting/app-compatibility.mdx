@@ -1,0 +1,398 @@
+---
+title: App Compatibility
+description: App-specific compatibility notes, workarounds, and configuration
+---
+
+## Works Everywhere
+
+Neru is designed to work universally across macOS apps. Here's the compatibility matrix:
+
+| Category     | Apps                                                | Grid Mode | Hints Mode |
+| ------------ | --------------------------------------------------- | :-------: | :--------: |
+| Native macOS | Finder, Safari, Mail, System Settings, Terminal     |    ✅     |     ✅     |
+| Electron     | VS Code, Cursor, Slack, Spotify, Obsidian, Discord  |    ✅     |  ✅ [1]   |
+| Browsers     | Chrome, Firefox, Safari, Arc, Brave, Zen            |    ✅     |  ✅ [1]   |
+| Creative     | Figma, Adobe Illustrator, Photoshop                 |    ✅     |  ✅ [2]   |
+| System UI    | Menubar, Dock, Mission Control, Notification Center |    ✅     |  ✅ [3]   |
+
+<Note>
+**Legend:**
+- [1] Requires additional AX support configuration
+- [2] May need custom clickable roles
+- [3] Requires enabling menubar/Dock hints
+</Note>
+
+<Warning>
+**Recursive Grid mode** (recommended) works universally without any app-specific configuration. It never needs tweaking and is the most reliable navigation method.
+
+**Grid mode** also works everywhere out of the box.
+
+**Hints mode** relies on accessibility trees, which may require app-specific configuration in some cases.
+</Warning>
+
+---
+
+## App-Specific Notes
+
+### Electron Apps
+
+<AccordionGroup>
+  <Accordion title="VS Code / Cursor">
+    **Issue:** Hints don't appear in editor content
+
+    **Solution:** Enable Electron AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    # VS Code and Cursor are auto-detected
+    ```
+
+    Restart Neru:
+    ```bash
+    pkill neru && neru launch
+    ```
+
+    <Note>
+    Grid and Recursive Grid modes work without any configuration.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Slack / Discord / Spotify">
+    **Issue:** Hints don't appear in content areas
+
+    **Solution:** Enable Electron AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    ```
+
+    If your Electron app isn't auto-detected:
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    additional_electron_bundles = [
+        "com.your.electronapp",
+    ]
+    ```
+
+    Find bundle ID:
+    ```bash
+    osascript -e 'id of app "AppName"'
+    ```
+  </Accordion>
+
+  <Accordion title="Obsidian">
+    **Issue:** Hints don't appear in note content
+
+    **Solution:** Enable Electron AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    # Obsidian is auto-detected
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Browsers
+
+<AccordionGroup>
+  <Accordion title="Chrome / Chromium / Arc / Brave">
+    **Issue:** Hints don't appear in web page content
+
+    **Solution:** Enable additional AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    ```
+
+    <Note>
+    Grid and Recursive Grid modes work perfectly for clicking anything on the page without configuration.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Firefox">
+    **Issue:** Hints don't appear in web page content
+
+    **Solution:** Enable additional AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    ```
+  </Accordion>
+
+  <Accordion title="Safari">
+    **Status:** Full native support, no configuration needed
+
+    Safari exposes a complete accessibility tree by default.
+  </Accordion>
+
+  <Accordion title="Zen Browser">
+    **Issue:** Hints don't appear in web page content
+
+    **Solution:** Enable additional AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Creative Apps
+
+<AccordionGroup>
+  <Accordion title="Adobe Illustrator">
+    **Issue:** Hints misaligned or missing on canvas elements
+
+    **Solution:** Add custom clickable roles
+
+    ```toml
+    [[hints.app_configs]]
+    bundle_id = "com.adobe.illustrator"
+    additional_clickable_roles = ["AXStaticText", "AXImage"]
+    ignore_clickable_check = true
+    ```
+
+    Find bundle ID:
+    ```bash
+    osascript -e 'id of app "Adobe Illustrator"'
+    ```
+  </Accordion>
+
+  <Accordion title="Adobe Photoshop">
+    **Issue:** Hints missing on toolbars or panels
+
+    **Solution:** Add custom clickable roles
+
+    ```toml
+    [[hints.app_configs]]
+    bundle_id = "com.adobe.Photoshop"
+    additional_clickable_roles = ["AXStaticText", "AXImage"]
+    ignore_clickable_check = true
+    ```
+  </Accordion>
+
+  <Accordion title="Figma (Desktop)">
+    **Issue:** Hints don't appear in canvas
+
+    **Solution:** Enable Electron AX support
+
+    ```toml
+    [hints.additional_ax_support]
+    enable = true
+    ```
+
+    <Note>
+    Grid and Recursive Grid modes are recommended for Figma as they provide precise canvas navigation.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+### System UI
+
+<AccordionGroup>
+  <Accordion title="Menubar">
+    **Issue:** No hints appear in menubar
+
+    **Solution:** Enable menubar hints
+
+    ```toml
+    [hints]
+    include_menubar_hints = true
+
+    # For specific menubar apps:
+    additional_menubar_hints_targets = [
+        "com.apple.controlcenter",
+        "net.kovidgoyal.kitty",  # Example
+    ]
+    ```
+  </Accordion>
+
+  <Accordion title="Dock">
+    **Issue:** No hints appear in Dock
+
+    **Solution:** Enable Dock hints
+
+    ```toml
+    [hints]
+    include_dock_hints = true
+    ```
+  </Accordion>
+
+  <Accordion title="Mission Control">
+    **Issue:** No hints in Mission Control
+
+    **Solution:** Enable Dock hints and Mission Control detection
+
+    ```toml
+    [hints]
+    include_dock_hints = true
+    detect_mission_control = true
+    ```
+
+    <Warning>
+    `detect_mission_control` only works on macOS 26.x (Tahoe) and above. Do not enable this if your macOS version is below 26.x.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Notification Center">
+    **Status:** Full support with default configuration
+
+    Notification Center is fully supported by default.
+  </Accordion>
+</AccordionGroup>
+
+### Terminal Apps
+
+<AccordionGroup>
+  <Accordion title="Terminal.app">
+    **Status:** Full native support
+
+    All modes work without configuration.
+  </Accordion>
+
+  <Accordion title="iTerm2">
+    **Status:** Full native support
+
+    All modes work without configuration.
+  </Accordion>
+
+  <Accordion title="Kitty / Alacritty / WezTerm">
+    **Status:** Full support
+
+    All modes work. For menubar hints in Kitty:
+
+    ```toml
+    [hints]
+    include_menubar_hints = true
+    additional_menubar_hints_targets = [
+        "net.kovidgoyal.kitty",
+    ]
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Mode Compatibility
+
+### Recursive Grid Mode
+
+<Card title="✅ Works Everywhere" icon="check">
+  **Recursive Grid mode** is the most universal navigation method. It works in:
+  - Every macOS app
+  - Every window
+  - Every corner of the screen
+  - No app-specific setup required
+  - No accessibility tree dependency
+
+  This is the **recommended default** for daily use.
+</Card>
+
+### Grid Mode
+
+<Card title="✅ Works Everywhere" icon="check">
+  **Grid mode** also works universally without any configuration:
+  - All apps and windows
+  - No setup needed
+  - Great for quick coarse navigation
+  - No accessibility tree dependency
+</Card>
+
+### Hints Mode
+
+<Card title="⚠️ App-Dependent" icon="circle-exclamation">
+  **Hints mode** relies on accessibility trees:
+  - Native macOS apps: ✅ Full support
+  - Electron apps: ✅ Requires `additional_ax_support`
+  - Browsers: ✅ Requires `additional_ax_support`
+  - Creative apps: ⚠️ May need custom roles
+  - System UI: ⚠️ May need menubar/Dock hints enabled
+
+  See app-specific sections above for configuration.
+</Card>
+
+---
+
+## Finding Bundle IDs
+
+Many configurations require an app's bundle identifier. Find it using:
+
+```bash
+# Replace "AppName" with the actual app name
+osascript -e 'id of app "AppName"'
+
+# Examples:
+osascript -e 'id of app "Visual Studio Code"'
+# → com.microsoft.VSCode
+
+osascript -e 'id of app "Slack"'
+# → com.tinyspeck.slackmacgap
+
+osascript -e 'id of app "Adobe Illustrator"'
+# → com.adobe.illustrator
+```
+
+---
+
+## Testing Compatibility
+
+To test if Neru works in a specific app:
+
+1. **Test Recursive Grid (recommended):**
+   ```bash
+   # Or use your configured hotkey
+   neru recursive-grid
+   ```
+   Should work immediately without configuration.
+
+2. **Test Grid:**
+   ```bash
+   # Or use your configured hotkey
+   neru grid
+   ```
+   Should work immediately without configuration.
+
+3. **Test Hints:**
+   ```bash
+   neru hints
+   ```
+   May require app-specific configuration.
+
+4. **Check logs:**
+   ```bash
+   tail -f ~/Library/Logs/neru/app.log
+   ```
+
+5. **Enable debug logging** if needed:
+   ```toml
+   [logging]
+   log_level = "debug"
+   ```
+
+---
+
+## Reporting Compatibility Issues
+
+If you encounter an app that doesn't work:
+
+1. **Try all three modes** (Recursive Grid, Grid, Hints)
+2. **Enable debug logging** and capture logs
+3. **Gather information:**
+   - App name and version
+   - App bundle ID: `osascript -e 'id of app "AppName"'`
+   - macOS version: `sw_vers`
+   - Neru version: `neru --version`
+   - Which mode doesn't work
+   - Screenshots if helpful
+
+4. **Search existing issues:**
+   - [GitHub Issues](https://github.com/y3owk1n/neru/issues)
+
+5. **Open a new issue** with all gathered information
