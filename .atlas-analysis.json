@@ -1,0 +1,134 @@
+{
+  "projectType": "saas",
+  "projectName": "Neru",
+  "projectDescription": "Keyboard-driven navigation for macOS that lets you navigate, click, and scroll anywhere on your screen without touching your mouse.",
+  "theme": "palm",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/navigation-modes",
+              "concepts/recursive-grid",
+              "concepts/grid-mode",
+              "concepts/hints-mode",
+              "concepts/scroll-mode"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/configuration",
+              "guides/hotkeys",
+              "guides/mouse-actions",
+              "guides/app-exclusions",
+              "guides/screen-sharing"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/cli-usage",
+              "advanced/scripting",
+              "advanced/ipc-automation"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/app-compatibility",
+              "troubleshooting/accessibility"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/architecture",
+              "development/building",
+              "development/coding-standards"
+            ]
+          },
+          {
+            "group": "Cross-Platform",
+            "pages": [
+              "development/cross-platform",
+              "development/porting-guide",
+              "development/linux-support",
+              "development/windows-support"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/daemon-control",
+              "cli/navigation",
+              "cli/actions",
+              "cli/services",
+              "cli/config"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Recursive Grid Mode - Coordinate-based screen subdivision",
+    "Grid Mode - Quick coarse navigation",
+    "Hints Mode - Accessibility-driven clickable labels",
+    "Vim-Style Scrolling - Familiar j/k, gg/G navigation",
+    "Direct Mouse Actions - Click, right-click, double-click, drag & drop",
+    "Per-App Exclusions - Disable Neru in specific applications",
+    "CLI & IPC - Full programmatic control and automation",
+    "TOML Configuration - Version-controllable, shareable config",
+    "Screen Sharing Mode - Hide overlays during presentations",
+    "Service Management - Auto-start with launchd integration"
+  ],
+  "publicApiSurface": [
+    "neru launch - Start the daemon",
+    "neru hints - Activate hints mode",
+    "neru grid - Activate grid mode",
+    "neru recursive_grid - Activate recursive grid mode",
+    "neru scroll - Activate scroll mode",
+    "neru action left_click - Immediate left click",
+    "neru action right_click - Immediate right click",
+    "neru action double_click - Immediate double click",
+    "neru action middle_click - Immediate middle click",
+    "neru move_mouse - Move cursor to absolute position",
+    "neru move_mouse_relative - Move cursor relatively",
+    "neru start - Resume paused daemon",
+    "neru stop - Pause daemon",
+    "neru idle - Cancel active mode",
+    "neru status - Check daemon status",
+    "neru services install - Install auto-start service",
+    "neru services uninstall - Remove auto-start service",
+    "neru services status - Check service status",
+    "neru config reload - Reload configuration",
+    "neru toggle-screen-share - Toggle overlay visibility"
+  ]
+}
